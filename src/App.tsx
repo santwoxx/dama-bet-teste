@@ -770,6 +770,10 @@ export default function App() {
     );
   }
 
+  // Memoized piece counts (must be before any early return to satisfy hooks rules)
+  const redCount = useMemo(() => activeGame ? activeGame.pieces.filter(p => p.color === 'red').length : 0, [activeGame?.pieces.length]);
+  const blackCount = useMemo(() => activeGame ? activeGame.pieces.filter(p => p.color === 'black').length : 0, [activeGame?.pieces.length]);
+
   if (!isAuthenticated || !player) {
     return (
       <div className="min-h-screen bg-[#07190e] text-white flex flex-col items-center justify-center font-sans relative px-4 py-8 overflow-hidden"
@@ -1010,9 +1014,6 @@ export default function App() {
       </div>
     );
   }
-
-  const redCount = useMemo(() => activeGame ? activeGame.pieces.filter(p => p.color === 'red').length : 0, [activeGame?.pieces.length]);
-  const blackCount = useMemo(() => activeGame ? activeGame.pieces.filter(p => p.color === 'black').length : 0, [activeGame?.pieces.length]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-stone-100 flex flex-col font-sans select-none antialiased selection:bg-amber-500/30 selection:text-white relative">
