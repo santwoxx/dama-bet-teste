@@ -2,7 +2,6 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
-import { kv } from '@vercel/kv';
 import { initializeBoard, getValidMoves, executeMove, checkGameOver } from './src/utils/checkers';
 import { Game, Player, Message, Transaction, GameStatus, PlayerColor, MoveCoordinates, Piece } from './src/types';
 
@@ -145,7 +144,32 @@ if (!fs.existsSync(DB_DIR)) {
   fs.mkdirSync(DB_DIR, { recursive: true });
 }
 
-const kvAvailable = !!(process.env.KV_URL || process.env.KV_REST_API_URL);
+const KV_REST_URL = process.env.KV_REST_API_URL;
+const KV_REST_TOKEN = process.env.KV_REST_API_TOKEN;
+const kvAvailable = !!(KV_REST_URL && KV_REST_TOKEN);
+
+async function kvGet(key: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${KV_REST_URL}/get/${key}`, {
+      headers: { Authorization: `Bearer ${KV_REST_TOKEN}` },
+    });
+    const data: any = await res.json();
+    return data.result ?? null;
+  } catch { return null; }
+}
+
+async function kvSet(key: string, value: string): Promise<void> {
+  try {
+    await fetch(`${KV_REST_URL}/set/${key}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${KV_REST_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(value),
+    });
+  } catch {}
+}
 
 function buildDbPayload() {
   return {
@@ -186,9 +210,7 @@ function saveDb() {
   // Fire-and-forget KV sync
   if (kvAvailable) {
     const dbPayload = buildDbPayload();
-    kv.set('db_payload', JSON.stringify(dbPayload)).catch((err: any) => {
-      console.error('Error saving to KV:', err);
-    });
+    kvSet('db_payload', JSON.stringify(dbPayload));
   }
 }
 
@@ -212,14 +234,12 @@ function loadDb() {
   }
   // Fire-and-forget KV load — overwrites file data with KV if available
   if (kvAvailable) {
-    kv.get('db_payload').then((raw: any) => {
+    kvGet('db_payload').then((raw) => {
       if (raw) {
-        const dbPayload = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        const dbPayload = JSON.parse(raw);
         restoreFromPayload(dbPayload);
         console.log(`Database loaded from KV. Users: ${users.size}, Txs: ${transactions.size}, Sessions: ${sessions.size}`);
       }
-    }).catch((err: any) => {
-      console.error('Error loading from KV:', err);
     });
   }
 }
