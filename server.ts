@@ -2116,6 +2116,12 @@ if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
   });
 }
 
+// Global Express error handler (must be registered after all routes)
+app.use((err: any, req: any, res: any, _next: any) => {
+  console.error('Unhandled error:', err?.stack || err?.message || err);
+  res.status(500).json({ error: 'Erro interno do servidor' });
+});
+
 // Server boot (dev mode — Vite middleware + listening)
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
