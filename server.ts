@@ -199,13 +199,15 @@ function loadDb() {
   }
 }
 
-// Load database immediately
+// Load database immediately (data survives in /tmp on Vercel within the same warm instance)
 loadDb();
 
-// Periodic auto-save every 3 seconds to guarantee persistence of logins, balances and match outputs
-setInterval(() => {
-  saveDb();
-}, 3000);
+// Periodic auto-save — only on non-serverless environments to avoid keeping the event loop alive on Vercel
+if (!process.env.VERCEL) {
+  setInterval(() => {
+    saveDb();
+  }, 3000);
+}
 
 // Active Stream Connections (SSE to keep games and lobby in real-time)
 interface Connection {
