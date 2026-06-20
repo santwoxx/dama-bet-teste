@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Coins, PlusCircle, Play, ArrowRight, UserCheck, Users, Copy, Send, HelpCircle, Mail, User, Lock, Eye, EyeOff, LogOut, Key, Sparkles, CircleDollarSign, Gem, Crown } from 'lucide-react';
 import { Game, Player, Transaction, MoveCoordinates, PlayerColor } from './types';
 import Header from './components/Header';
@@ -226,6 +226,8 @@ export default function App() {
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
   const gameStageRef = useRef<HTMLDivElement | null>(null);
   const lastChatLengthRef = useRef<number>(0);
+  const activeGameRef = useRef<Game | null>(null);
+  activeGameRef.current = activeGame;
 
   // 1. Boot up: Verify stored token or prompt login
   useEffect(() => {
@@ -725,7 +727,7 @@ export default function App() {
   };
 
   // Actions: CONFIRM BET LOCK
-  const handleConfirmBet = async (actorId: string) => {
+  const handleConfirmBet = useCallback(async (actorId: string) => {
     if (!activeGameId) return;
     try {
       const response = await fetch('/api/games/confirm-bet', {
@@ -742,16 +744,17 @@ export default function App() {
     } catch {
       // fail silently
     }
-  };
+  }, [activeGameId]);
 
   // Actions: SUBMIT MOVE
-  const handleMoveSubmitted = async (move: MoveCoordinates) => {
+  const handleMoveSubmitted = useCallback(async (move: MoveCoordinates) => {
     if (!activeGameId) return;
     try {
       // Determine sender
       let actingPlayerId = userId;
       if (sandboxModeActive) {
-        actingPlayerId = activeGame?.turn === 'red' ? activeGame.host.id : activeGame!.guest!.id;
+        const g = activeGameRef.current!;
+        actingPlayerId = g.turn === 'red' ? g.host.id : g.guest!.id;
       }
 
       const response = await fetch('/api/games/move', {
@@ -773,10 +776,10 @@ export default function App() {
     } catch {
       // ignore
     }
-  };
+  }, [activeGameId, userId, sandboxModeActive]);
 
   // Actions: RESIGN MATCH
-  const handleResign = async (actorId: string) => {
+  const handleResign = useCallback(async (actorId: string) => {
     if (!activeGameId) return;
     try {
       await fetch('/api/games/resign', {
@@ -787,10 +790,10 @@ export default function App() {
     } catch {
       // fail
     }
-  };
+  }, [activeGameId]);
 
   // Actions: ASK DRAW
-  const handleDrawVote = async (actorId: string) => {
+  const handleDrawVote = useCallback(async (actorId: string) => {
     if (!activeGameId) return;
     try {
       const response = await fetch('/api/games/draw', {
@@ -807,7 +810,7 @@ export default function App() {
     } catch {
       // fail
     }
-  };
+  }, [activeGameId]);
 
   // Actions: CANCEL WAITING GAME
   const handleCancelGame = async () => {
@@ -829,7 +832,7 @@ export default function App() {
   };
 
   // Actions: SEND CHAT
-  const handleSendChat = async (e: React.FormEvent) => {
+  const handleSendChat = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatText.trim() || !activeGameId || !player) return;
 
@@ -837,8 +840,9 @@ export default function App() {
     let sId = userId;
     let sName = player.name;
     if (sandboxModeActive) {
-      sId = activeGame?.turn === 'red' ? activeGame.host.id : activeGame!.guest!.id;
-      sName = activeGame?.turn === 'red' ? activeGame.host.name : activeGame!.guest!.name;
+      const g = activeGameRef.current!;
+      sId = g.turn === 'red' ? g.host.id : g.guest!.id;
+      sName = g.turn === 'red' ? g.host.name : g.guest!.name;
     }
 
     try {
@@ -856,10 +860,10 @@ export default function App() {
     } catch {
       // fail
     }
-  };
+  }, [chatText, activeGameId, player, userId, sandboxModeActive]);
 
   // Actions: LEAVE GAME ARENA
-  const handleExitToLobby = () => {
+  const handleExitToLobby = useCallback(() => {
     if (gameSseRef.current) gameSseRef.current.close();
     setActiveGameId(null);
     setActiveGame(null);
@@ -867,7 +871,7 @@ export default function App() {
     setGameError('');
     setCurrentView('lobby');
     if (player) fetchProfile(player.id);
-  };
+  }, [player]);
 
   const copyRoomInviteLink = () => {
     if (!activeGameId) return;
@@ -1176,7 +1180,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-stone-100 flex flex-col font-sans select-none antialiased selection:bg-amber-500/30 selection:text-white relative">
-      <SparkleBg density={8} />
+      <SparkleBg density={currentView === 'game' ? 2 : 8} />
+      {currentView !== 'game' && <FortuneParticles />}
       {player && (
         <Header 
           player={player} 

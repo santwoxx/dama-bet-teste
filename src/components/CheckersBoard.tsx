@@ -1,19 +1,19 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect, memo } from 'react';
 import { BadgeAlert, Crown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BoardState, Piece, MoveCoordinates, PlayerColor } from '../types';
-import { getValidMoves, calculatePieceMoves, isValidCoordinate } from '../utils/checkers';
+import { getValidMoves } from '../utils/checkers';
 
 interface CheckersBoardProps {
   board: BoardState;
   turn: PlayerColor;
-  userColor: PlayerColor | 'both'; // 'both' is used for sandbox simulation mode
+  userColor: PlayerColor | 'both';
   mustJumpPieceId: string | null;
   onMoveSubmitted: (move: MoveCoordinates) => void;
   gameActive: boolean;
 }
 
-export default function CheckersBoard({
+function CheckersBoard({
   board,
   turn,
   userColor,
@@ -22,87 +22,52 @@ export default function CheckersBoard({
   gameActive,
 }: CheckersBoardProps) {
   const [selectedPiece, setSelectedPiece] = useState<Piece | null>(null);
-  const [highlightedMoves, setHighlightedMoves] = useState<MoveCoordinates[]>([]);
-  const [allValidMoves, setAllValidMoves] = useState<MoveCoordinates[]>([]);
 
-  // Calculate global valid moves for current player color whenever state or turn shifts
+  const allValidMoves = useMemo(() => {
+    if (!gameActive) return [];
+    return getValidMoves(board.grid, turn, mustJumpPieceId);
+  }, [board.grid, turn, mustJumpPieceId, gameActive]);
+
+  const prevTurn = useRef(turn);
   useEffect(() => {
-    if (!gameActive) {
-      setAllValidMoves([]);
-      return;
+    if (prevTurn.current !== turn) {
+      setSelectedPiece((prev) => {
+        if (prev && prev.color === turn) return prev;
+        return null;
+      });
+      prevTurn.current = turn;
     }
-    const currentColor = turn;
-    const moves = getValidMoves(board.grid, currentColor, mustJumpPieceId);
-    setAllValidMoves(moves);
-    
-    // Automatically reset visual selections if turn shifts
-    setSelectedPiece((prev) => {
-      // Keep if still turn turn of the same player AND still valid
-      if (prev && prev.color === turn) {
-        return prev;
-      }
-      return null;
-    });
-  }, [board, turn, mustJumpPieceId, gameActive]);
+  }, [turn]);
 
-  // Handle piece selection
-  const handlePieceClick = (piece: Piece) => {
-    if (!gameActive) return;
-    
-    // Validate if turn matches the user's role color
-    if (userColor !== 'both' && userColor !== piece.color) {
-      return; // Not your piece!
-    }
-
-    if (piece.color !== turn) {
-      return; // Not your turn!
-    }
-
-    // Double jump piece constraint check
-    if (mustJumpPieceId && piece.id !== mustJumpPieceId) {
-      return; // You must move the double-jump piece!
-    }
-
-    setSelectedPiece(piece);
-
-    // Filter all global legal moves to those that belong to this selected piece
-    const movesForThisPiece = allValidMoves.filter(
-      (m) => m.from.row === piece.row && m.from.col === piece.col
-    );
-    setHighlightedMoves(movesForThisPiece);
-  };
-
-  // Keep highlighted moves updated when selected piece changes or turns alter
-  useEffect(() => {
-    if (!selectedPiece) {
-      setHighlightedMoves([]);
-      return;
-    }
-    const movesForThisPiece = allValidMoves.filter(
+  const highlightedMoves = useMemo(() => {
+    if (!selectedPiece) return [];
+    return allValidMoves.filter(
       (m) => m.from.row === selectedPiece.row && m.from.col === selectedPiece.col
     );
-    setHighlightedMoves(movesForThisPiece);
   }, [selectedPiece, allValidMoves]);
 
-  // Handle clicking on any square
-  const handleCellClick = (row: number, col: number) => {
-    // Check if there's a movement match
+  const handlePieceClick = useCallback((piece: Piece) => {
+    if (!gameActive) return;
+    if (userColor !== 'both' && userColor !== piece.color) return;
+    if (piece.color !== turn) return;
+    if (mustJumpPieceId && piece.id !== mustJumpPieceId) return;
+    setSelectedPiece(piece);
+  }, [gameActive, userColor, turn, mustJumpPieceId]);
+
+  const handleCellClick = useCallback((row: number, col: number) => {
     const matchedMove = highlightedMoves.find((m) => m.to.row === row && m.to.col === col);
     if (matchedMove) {
       onMoveSubmitted(matchedMove);
       setSelectedPiece(null);
-      setHighlightedMoves([]);
     } else {
-      // Clicked outside legal targets, check if they clicked a friendly piece to switch selection
       const cellPiece = board.grid[row][col];
       if (cellPiece && cellPiece.color === turn) {
         handlePieceClick(cellPiece);
       } else {
         setSelectedPiece(null);
-        setHighlightedMoves([]);
       }
     }
-  };
+  }, [highlightedMoves, onMoveSubmitted, board.grid, turn, handlePieceClick]);
 
   const isUserTurn = userColor === 'both' || userColor === turn;
 
@@ -260,3 +225,27 @@ export default function CheckersBoard({
     </div>
   );
 }
+
+function boardGridChanged(prev: BoardState, next: BoardState) {
+  if (prev.grid.length !== next.grid.length) return true;
+  if (prev.grid[0]?.length !== next.grid[0]?.length) return true;
+  for (let r = 0; r < prev.grid.length; r++) {
+    for (let c = 0; c < prev.grid[r].length; c++) {
+      const a = prev.grid[r][c];
+      const b = next.grid[r][c];
+      if (a === b) continue;
+      if (!a || !b) return true;
+      if (a.id !== b.id || a.row !== b.row || a.col !== b.col || a.color !== b.color || a.isKing !== b.isKing) return true;
+    }
+  }
+  return false;
+}
+
+export default memo(CheckersBoard, (prev, next) => {
+  if (prev.gameActive !== next.gameActive) return false;
+  if (prev.turn !== next.turn) return false;
+  if (prev.mustJumpPieceId !== next.mustJumpPieceId) return false;
+  if (prev.userColor !== next.userColor) return false;
+  if (boardGridChanged(prev.board, next.board)) return false;
+  return true;
+});
