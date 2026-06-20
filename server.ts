@@ -168,7 +168,30 @@ async function kvSet(key: string, value: string): Promise<void> {
       },
       body: JSON.stringify(value),
     });
+    } catch {}
+}
+
+// Shared KV game persistence for Vercel multi-instance support
+async function gameKvSet(game: Game): Promise<void> {
+  games.set(game.id, game);
+  if (kvAvailable) {
+    await kvSet(`game:${game.id}`, JSON.stringify(game));
+  }
+}
+
+async function gameKvGet(gameId: string): Promise<Game | undefined> {
+  const local = games.get(gameId);
+  if (local) return local;
+  if (!kvAvailable) return undefined;
+  try {
+    const raw = await kvGet(`game:${gameId}`);
+    if (raw) {
+      const game = JSON.parse(raw) as Game;
+      games.set(gameId, game);
+      return game;
+    }
   } catch {}
+  return undefined;
 }
 
 function buildDbPayload() {
@@ -894,26 +917,28 @@ function checkGameTimeoutAndResolve(gameId: string): boolean {
 }
 
 // Background interval to check for game match 10-minute timeouts
-setInterval(() => {
-  for (const game of games.values()) {
-    if (game.status === 'active' && game.startedAt) {
-      checkGameTimeoutAndResolve(game.id);
+if (!process.env.VERCEL) {
+  setInterval(() => {
+    for (const game of games.values()) {
+      if (game.status === 'active' && game.startedAt) {
+        checkGameTimeoutAndResolve(game.id);
+      }
     }
-  }
-}, 3000);
+  }, 3000);
 
-// Generate fake winners every 5 minutes for social proof ticker
-setInterval(() => {
-  const values = [18, 28, 38, 48];
-  const fakeName = fictitiousNames[Math.floor(Math.random() * fictitiousNames.length)];
-  const fakeValue = values[Math.floor(Math.random() * values.length)];
-  lastWinners.unshift({
-    playerName: fakeName,
-    amount: fakeValue,
-    timestamp: new Date().toISOString(),
-  });
-  if (lastWinners.length > 50) lastWinners.length = 50;
-}, 5 * 60 * 1000);
+  // Generate fake winners every 5 minutes for social proof ticker
+  setInterval(() => {
+    const values = [18, 28, 38, 48];
+    const fakeName = fictitiousNames[Math.floor(Math.random() * fictitiousNames.length)];
+    const fakeValue = values[Math.floor(Math.random() * values.length)];
+    lastWinners.unshift({
+      playerName: fakeName,
+      amount: fakeValue,
+      timestamp: new Date().toISOString(),
+    });
+    if (lastWinners.length > 50) lastWinners.length = 50;
+  }, 5 * 60 * 1000);
+}
 
 // Ensure user exists or create a default Profile
 function getOrCreateUser(id: string, customName?: string): Player {
@@ -1416,14 +1441,17 @@ app.post('/api/webhooks/mercadopago', async (req, res) => {
 });
 
 // Create checkers Game
-app.post('/api/games/create', (req, res) => {
-  const { hostId, betAmount, isBotGame } = req.body;
+app.post('/api/games/create', async (req, res) => {
+  const { hostId, betAmount, isBotGame, botGamesPlayed } = req.body;
   const parsedBet = parseFloat(betAmount);
   if (!hostId || isNaN(parsedBet) || parsedBet < 0) {
     return res.status(400).json({ error: 'Parâmetros de aposta inválidos' });
   }
 
   const hostPlayer = getOrCreateUser(hostId);
+  if (isBotGame && typeof botGamesPlayed === 'number') {
+    hostPlayer.botGamesPlayed = botGamesPlayed;
+  }
   const hostTotalPlayable = hostPlayer.balance + (hostPlayer.bonusBalance || 0);
   if (hostTotalPlayable < parsedBet) {
     return res.status(400).json({ error: 'Seu saldo é insuficiente para criar esta aposta!' });
@@ -1493,20 +1521,20 @@ app.post('/api/games/create', (req, res) => {
     mustJumpPieceIdByTurn: null,
   };
 
-  games.set(gameId, newGame);
+  await gameKvSet(newGame);
   broadcastLobby();
 
   res.json({ success: true, game: newGame });
 });
 
 // Join checking Game
-app.post('/api/games/join', (req, res) => {
+app.post('/api/games/join', async (req, res) => {
   const { gameId, guestId } = req.body;
   if (!gameId || !guestId) {
     return res.status(400).json({ error: 'Dados em falta para ingressar' });
   }
 
-  const game = games.get(gameId);
+  const game = await gameKvGet(gameId);
   if (!game) {
     return res.status(404).json({ error: 'Partida não encontrada' });
   }
@@ -1529,7 +1557,7 @@ app.post('/api/games/join', (req, res) => {
   game.status = 'bet_confirmation';
   game.log.push(`${guestPlayer.name} entrou na mesa! Requer confirmação de fundos.`);
 
-  games.set(gameId, game);
+  await gameKvSet(game);
   broadcastGame(gameId);
   broadcastLobby();
 
@@ -1537,7 +1565,7 @@ app.post('/api/games/join', (req, res) => {
 });
 
 // Confirm Bet / Lock Deposits
-app.post(['/api/games/:gameId/bet-confirm', '/api/games/confirm-bet'], (req, res) => {
+app.post(['/api/games/:gameId/bet-confirm', '/api/games/confirm-bet'], async (req, res) => {
   const gameId = (req.params.gameId || req.body.gameId) as string;
   const { userId } = req.body;
 
@@ -1545,7 +1573,7 @@ app.post(['/api/games/:gameId/bet-confirm', '/api/games/confirm-bet'], (req, res
     return res.status(400).json({ error: 'Dados insuficientes. Falta gameId ou userId' });
   }
 
-  const game = games.get(gameId);
+  const game = await gameKvGet(gameId);
   if (!game) {
     return res.status(404).json({ error: 'Mecanismo de jogo não encontrado' });
   }
@@ -1620,7 +1648,7 @@ app.post(['/api/games/:gameId/bet-confirm', '/api/games/confirm-bet'], (req, res
     game.log.push(`💸 Aposta total de R$ ${(game.betAmount * 2).toFixed(2)} está fechada e sob custódia segura! Que comece o jogo!`);
   }
 
-  games.set(gameId, game);
+  await gameKvSet(game);
   broadcastGame(gameId);
   broadcastLobby();
 
@@ -1628,7 +1656,7 @@ app.post(['/api/games/:gameId/bet-confirm', '/api/games/confirm-bet'], (req, res
 });
 
 // Forfeit Rule / Resign
-app.post(['/api/games/:gameId/resign', '/api/games/resign'], (req, res) => {
+app.post(['/api/games/:gameId/resign', '/api/games/resign'], async (req, res) => {
   const gameId = (req.params.gameId || req.body.gameId) as string;
   const { userId } = req.body;
 
@@ -1636,7 +1664,7 @@ app.post(['/api/games/:gameId/resign', '/api/games/resign'], (req, res) => {
     return res.status(400).json({ error: 'Dados insuficientes. Falta gameId ou userId' });
   }
 
-  const game = games.get(gameId);
+  const game = await gameKvGet(gameId);
   if (!game || game.status !== 'active') {
     return res.status(404).json({ error: 'Partida em andamento não ativa' });
   }
@@ -1677,7 +1705,7 @@ app.post(['/api/games/:gameId/resign', '/api/games/resign'], (req, res) => {
   const currentWinnerTx = transactions.get(winnerUserId) || [];
   transactions.set(winnerUserId, [txPayout, ...currentWinnerTx]);
 
-  games.set(gameId, game);
+  await gameKvSet(game);
   broadcastGame(gameId);
   broadcastLobby();
 
@@ -1685,7 +1713,7 @@ app.post(['/api/games/:gameId/resign', '/api/games/resign'], (req, res) => {
 });
 
 // Vote in agreement of a Draw
-app.post(['/api/games/:gameId/draw-vote', '/api/games/draw'], (req, res) => {
+app.post(['/api/games/:gameId/draw-vote', '/api/games/draw'], async (req, res) => {
   const gameId = (req.params.gameId || req.body.gameId) as string;
   const { userId } = req.body;
 
@@ -1693,7 +1721,7 @@ app.post(['/api/games/:gameId/draw-vote', '/api/games/draw'], (req, res) => {
     return res.status(400).json({ error: 'Dados insuficientes. Falta gameId ou userId' });
   }
 
-  const game = games.get(gameId);
+  const game = await gameKvGet(gameId);
   if (!game || game.status !== 'active') {
     return res.status(404).json({ error: 'Jogo inválido ou não ativo' });
   }
@@ -1747,14 +1775,14 @@ app.post(['/api/games/:gameId/draw-vote', '/api/games/draw'], (req, res) => {
     transactions.set(game.guest!.id, [txRefundG, ...walletG]);
   }
 
-  games.set(gameId, game);
+  await gameKvSet(game);
   broadcastGame(gameId);
 
   res.json({ success: true, game });
 });
 
 // Cancel game before anyone joins (unlocked)
-app.post(['/api/games/:gameId/cancel', '/api/games/cancel'], (req, res) => {
+app.post(['/api/games/:gameId/cancel', '/api/games/cancel'], async (req, res) => {
   const gameId = (req.params.gameId || req.body.gameId) as string;
   const userId = (req.body.userId || req.body.hostId) as string;
 
@@ -1762,7 +1790,7 @@ app.post(['/api/games/:gameId/cancel', '/api/games/cancel'], (req, res) => {
     return res.status(400).json({ error: 'Dados insuficientes. Falta gameId ou userId' });
   }
 
-  const game = games.get(gameId);
+  const game = await gameKvGet(gameId);
   if (!game) {
     return res.status(404).json({ error: 'Partida não encontrada' });
   }
@@ -1780,7 +1808,7 @@ app.post(['/api/games/:gameId/cancel', '/api/games/cancel'], (req, res) => {
 
   // Since bet triggers locked at confirmation stage only, no refund is needed. 
   // If we had deducted it, we refund it, but here deduction only happens when BOTH locked and ready!
-  games.set(gameId, game);
+  await gameKvSet(game);
   broadcastGame(gameId);
   broadcastLobby();
 
@@ -1788,7 +1816,7 @@ app.post(['/api/games/:gameId/cancel', '/api/games/cancel'], (req, res) => {
 });
 
 // Chat message
-app.post(['/api/games/:gameId/chat', '/api/games/chat'], (req, res) => {
+app.post(['/api/games/:gameId/chat', '/api/games/chat'], async (req, res) => {
   const gameId = (req.params.gameId || req.body.gameId) as string;
   const userId = (req.body.userId || req.body.senderId) as string;
   const { text } = req.body;
@@ -1797,7 +1825,7 @@ app.post(['/api/games/:gameId/chat', '/api/games/chat'], (req, res) => {
     return res.status(400).json({ error: 'Dados insuficientes' });
   }
 
-  const game = games.get(gameId);
+  const game = await gameKvGet(gameId);
   if (!game) {
     return res.status(404).json({ error: 'Partida não correspondida' });
   }
@@ -1816,14 +1844,14 @@ app.post(['/api/games/:gameId/chat', '/api/games/chat'], (req, res) => {
   };
 
   game.chat.push(message);
-  games.set(gameId, game);
+  await gameKvSet(game);
   broadcastGame(gameId);
 
   res.json({ success: true });
 });
 
 // Submit Checkers Game Move
-app.post(['/api/games/:gameId/move', '/api/games/move'], (req, res) => {
+app.post(['/api/games/:gameId/move', '/api/games/move'], async (req, res) => {
   const gameId = (req.params.gameId || req.body.gameId) as string;
   const { userId, move } = req.body; // move: MoveCoordinates
 
@@ -1831,7 +1859,7 @@ app.post(['/api/games/:gameId/move', '/api/games/move'], (req, res) => {
     return res.status(400).json({ error: 'Dados insuficientes' });
   }
 
-  const game = games.get(gameId);
+  const game = await gameKvGet(gameId);
   if (!game) {
     return res.status(404).json({ error: 'Partida não encontrada' });
   }
@@ -1978,7 +2006,7 @@ app.post(['/api/games/:gameId/move', '/api/games/move'], (req, res) => {
     }
   }
 
-  games.set(gameId, game);
+  await gameKvSet(game);
   broadcastGame(gameId);
   broadcastLobby();
 
@@ -1990,7 +2018,7 @@ app.post(['/api/games/:gameId/move', '/api/games/move'], (req, res) => {
 });
 
 // Real-Time SSE Game subscription streams
-app.get(['/api/games/:gameId/stream', '/api/games/stream'], (req, res) => {
+app.get(['/api/games/:gameId/stream', '/api/games/stream'], async (req, res) => {
   const gameId = (req.params.gameId || req.query.gameId) as string;
 
   if (!gameId) {
@@ -2013,7 +2041,7 @@ app.get(['/api/games/:gameId/stream', '/api/games/stream'], (req, res) => {
   gameConnections.set(gameId, [...currentConnections, connection]);
 
   // Push immediate first state
-  const game = games.get(gameId);
+  const game = await gameKvGet(gameId);
   if (game) {
     res.write(`data: ${JSON.stringify(game)}\n\n`);
   }
@@ -2102,6 +2130,15 @@ app.get('/api/ranking/weekly', (req, res) => {
 
 app.get('/api/ranking/last-winners', (req, res) => {
   res.json({ winners: lastWinners.slice(0, 20) });
+});
+
+// Optimistic game state fetch (used as SSE polling fallback on Vercel)
+app.get('/api/games/state', async (req, res) => {
+  const gameId = req.query.gameId as string;
+  if (!gameId) return res.status(400).json({ error: 'Falta gameId' });
+  const game = await gameKvGet(gameId);
+  if (!game) return res.status(404).json({ error: 'Partida não encontrada' });
+  res.json({ game });
 });
 
 // Production static file serving + SPA fallback (used both locally and on Vercel)

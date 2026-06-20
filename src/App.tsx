@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Coins, PlusCircle, Play, ArrowRight, UserCheck, Users, Copy, Send, HelpCircle, Mail, User, Lock, Eye, EyeOff, LogOut, Key, Sparkles, CircleDollarSign, Gem, Crown } from 'lucide-react';
 import { Game, Player, Transaction, MoveCoordinates, PlayerColor } from './types';
 import Header from './components/Header';
@@ -9,15 +9,18 @@ import { playReactionSound, playWinSound, playMoveSound, playCaptureSound } from
 import { motion, AnimatePresence } from 'motion/react';
 
 // ─── Sparkle Background Overlay (Tigrinho Style) ─────────────────────
-function SparkleBg({ density = 15, className = '' }: { density?: number; className?: string }) {
-  const sparkles = React.useMemo(() =>
-    Array.from({ length: density }, (_, i) => ({
+const SparkleBg = React.memo(function SparkleBg({ density = 15, className = '' }: { density?: number; className?: string }) {
+  const sparkles = React.useMemo(() => {
+    const h = typeof window !== 'undefined' ? window.innerHeight : 600;
+    return Array.from({ length: density }, (_, i) => ({
       id: i,
       left: Math.random() * 100,
       delay: Math.random() * 5,
       size: 3 + Math.random() * 5,
       duration: 3 + Math.random() * 4,
-    })), [density]);
+      targetY: -h * (0.5 + Math.random() * 0.5),
+    }));
+  }, [density]);
 
   return (
     <div className={`fixed inset-0 pointer-events-none z-0 overflow-hidden ${className}`}>
@@ -33,7 +36,7 @@ function SparkleBg({ density = 15, className = '' }: { density?: number; classNa
             boxShadow: `0 0 ${s.size * 2}px rgba(250,191,24,0.6), 0 0 ${s.size * 4}px rgba(250,191,24,0.2)`,
           }}
           animate={{
-            y: [0, -window.innerHeight * (0.5 + Math.random() * 0.5)],
+            y: [0, s.targetY],
             opacity: [0, 1, 0.8, 0],
             scale: [0, 1, 0.8, 0],
           }}
@@ -47,7 +50,7 @@ function SparkleBg({ density = 15, className = '' }: { density?: number; classNa
       ))}
     </div>
   );
-}
+});
 
 // ─── Floating Fortune Particles ───────────────────────────────────────
 function FortuneParticles() {
@@ -113,7 +116,6 @@ export default function App() {
   // Game states
   const [activeGameId, setActiveGameId] = useState<string | null>(null);
   const [activeGame, setActiveGame] = useState<Game | null>(null);
-  const [lobbyGames, setLobbyGames] = useState<Game[]>([]);
   const [betAmount, setBetAmount] = useState<number>(10);
   
   // Secondary simulated player (for local sandbox play)
@@ -140,10 +142,8 @@ export default function App() {
   // Inputs & loaders
   const [chatText, setChatText] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
-  const [joinLoading, setJoinLoading] = useState(false);
   const [lobbyError, setLobbyError] = useState('');
   const [gameError, setGameError] = useState('');
-  const [copiedLink, setCopiedLink] = useState(false);
 
   // Floating reactions & Victory overlay states
   const [floatingReactions, setFloatingReactions] = useState<{ id: string; emoji: string; delay: number; styleLeft: number }[]>([]);
@@ -155,6 +155,10 @@ export default function App() {
   const [activeMatches, setActiveMatches] = useState(237);
   const [weeklyRanking, setWeeklyRanking] = useState<{ id: string; name: string; total: number }[]>([]);
   const [lastWinners, setLastWinners] = useState<{ playerName: string; amount: number; timestamp: string }[]>([]);
+  const [botGamesPlayed, setBotGamesPlayed] = useState<number>(() => {
+    const saved = localStorage.getItem('damabet_bot_games');
+    return saved ? parseInt(saved, 10) : 0;
+  });
 
   useEffect(() => {
     if (!activeGame || activeGame.status !== 'active' || !activeGame.startedAt) {
@@ -177,6 +181,16 @@ export default function App() {
 
   // Social proof polling
   useEffect(() => {
+    const fakeNames = [
+      'Ruan2020', 'Lucas77', 'MatheusBR', 'PedroX10', 'Kaio99', 'Gabriel22',
+      'Felipe777', 'ViniciusX', 'JoãoPro', 'Rafa2025', 'Gustavo01', 'Henrique7',
+      'LeoMaster', 'Kauan09', 'DaviX1', 'ArthurPlay', 'Biel777', 'ThiagoBR',
+      'BrunoX', 'Caio2024', 'Kadabra30', 'Ruanzinho7', 'JPX99', 'Nando22',
+      'AllanPro', 'Ana2020', 'JuliaX', 'Bia777', 'MariGamer', 'Luh22',
+      'CarolBR', 'Bella99', 'AmandaX', 'DudaPlay', 'Isa2024', 'Vivi777',
+      'NathyPro', 'Gabi01', 'LariX', 'Juhzinha', 'Sofia22', 'ManuBR',
+    ];
+
     const fetchStats = async () => {
       try {
         const res = await fetch('/api/stats');
@@ -204,7 +218,20 @@ export default function App() {
     const statsInt = setInterval(fetchStats, 5000);
     const rankInt = setInterval(fetchRanking, 30000);
     const winInt = setInterval(fetchWinners, 15000);
-    return () => { clearInterval(statsInt); clearInterval(rankInt); clearInterval(winInt); };
+
+    const fakeWinInt = setInterval(() => {
+      const values = [5, 10, 15, 20, 25, 50];
+      setLastWinners((prev) => {
+        const next = [{
+          playerName: fakeNames[Math.floor(Math.random() * fakeNames.length)],
+          amount: values[Math.floor(Math.random() * values.length)],
+          timestamp: new Date().toISOString(),
+        }, ...prev];
+        return next.slice(0, 50);
+      });
+    }, 30000);
+
+    return () => { clearInterval(statsInt); clearInterval(rankInt); clearInterval(winInt); clearInterval(fakeWinInt); };
   }, []);
 
   const triggerEmojiReaction = (emoji: string) => {
@@ -214,13 +241,12 @@ export default function App() {
       delay: Math.random() * 0.15,
       styleLeft: 8 + Math.random() * 84, // random x percentage inside parent bounds
     };
-    setFloatingReactions((prev) => [...prev, newReaction]);
+    setFloatingReactions((prev) => [...prev.slice(-29), newReaction]);
     // Play a delightful micro-audio reaction sound effect
     playReactionSound();
   };
 
   // References for SSE connections
-  const lobbySseRef = useRef<EventSource | null>(null);
   const gameSseRef = useRef<EventSource | null>(null);
   const logContainerRef = useRef<HTMLDivElement | null>(null);
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
@@ -432,38 +458,7 @@ export default function App() {
     }
   };
 
-  // 3. Setup Lobby SSE stream
-  useEffect(() => {
-    if (currentView === 'lobby') {
-      if (lobbySseRef.current) lobbySseRef.current.close();
-      
-      const sse = new EventSource('/api/lobby/stream');
-      lobbySseRef.current = sse;
-
-      sse.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (Array.isArray(data)) {
-            setLobbyGames(data);
-          } else if (data.games) {
-            setLobbyGames(data.games);
-          }
-        } catch {
-          // ignore
-        }
-      };
-
-      sse.onerror = () => {
-        sse.close();
-      };
-
-      return () => {
-        sse.close();
-      };
-    }
-  }, [currentView]);
-
-  // 4. Setup Active Game SSE stream
+  // 3. Active Game SSE stream
   useEffect(() => {
     if (currentView === 'game' && activeGameId) {
       if (gameSseRef.current) gameSseRef.current.close();
@@ -493,17 +488,41 @@ export default function App() {
           if (incoming.status === 'finished') {
             fetchProfile(userId);
           }
+          if (incoming.status === 'finished' && incoming.isBotGame) {
+            setBotGamesPlayed((prev) => {
+              const next = prev + 1;
+              localStorage.setItem('damabet_bot_games', String(next));
+              return next;
+            });
+          }
         } catch {
           // ignore
         }
       };
 
+      const pollRef = { current: null as ReturnType<typeof setInterval> | null };
       sse.onerror = () => {
         sse.close();
+        if (!pollRef.current && activeGameId) {
+          pollRef.current = setInterval(async () => {
+            try {
+              const r = await fetch(`/api/games/state?gameId=${activeGameId}`);
+              if (r.ok) {
+                const d = await r.json();
+                if (d.game) setActiveGame(d.game);
+              }
+            } catch {}
+          }, 5000);
+        }
+      };
+
+      sse.onopen = () => {
+        if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
       };
 
       return () => {
         sse.close();
+        if (pollRef.current) { clearInterval(pollRef.current); }
       };
     }
   }, [currentView, activeGameId]);
@@ -564,17 +583,6 @@ export default function App() {
     }
   }, [currentView, activeGameId]);
 
-  // URL Query joining logic helper
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const roomToJoin = params.get('joinRoom');
-    if (roomToJoin && lobbyGames.length > 0 && player) {
-      // strip queries to keep url elegant
-      window.history.replaceState({}, document.title, window.location.pathname);
-      handleJoinGame(roomToJoin);
-    }
-  }, [lobbyGames, player]);
-
   // Profile Updating
   const updateProfileName = async () => {
     if (!userName.trim()) return;
@@ -594,7 +602,7 @@ export default function App() {
     }
   };
 
-  // Actions trigger: CREATE PVP GAME
+  // Actions trigger: CREATE BOT GAME
   const handleCreateGame = async () => {
     setLobbyError('');
     if (!player) return;
@@ -609,7 +617,7 @@ export default function App() {
       const response = await fetch('/api/games/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hostId: userId, betAmount }),
+        body: JSON.stringify({ hostId: userId, betAmount, isBotGame: true, botGamesPlayed }),
       });
 
       const data = await response.json();
@@ -630,94 +638,7 @@ export default function App() {
 
 
 
-  // Actions: JOIN MATCH
-  const handleJoinGame = async (gameId: string) => {
-    setLobbyError('');
-    if (!player) return;
-
-    const gameToJoin = lobbyGames.find((g) => g.id === gameId);
-    if (gameToJoin && player.balance < gameToJoin.betAmount) {
-      setLobbyError(`Saldo insuficiente de R$ ${player.balance.toFixed(2)} para cobrir aposta de R$ ${gameToJoin.betAmount.toFixed(2)}.`);
-      return;
-    }
-
-    setJoinLoading(true);
-    try {
-      const response = await fetch('/api/games/join', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ guestId: userId, gameId }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Não foi possível entrar.');
-      }
-
-      setActiveGameId(data.game.id);
-      setActiveGame(data.game);
-      setCurrentView('game');
-      fetchProfile(userId);
-    } catch (err: any) {
-      setLobbyError(err.message || 'Houve um erro.');
-    } finally {
-      setJoinLoading(false);
-    }
-  };
-
-  // Actions: CONFIRM BET LOCK
-  const handleConfirmBet = useCallback(async (actorId: string) => {
-    if (!activeGameId) return;
-    try {
-      const response = await fetch('/api/games/confirm-bet', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: actorId, gameId: activeGameId }),
-      });
-      if (!response.ok) {
-        const d = await response.json();
-        setGameError(d.error || 'Erro ao certificar aposta.');
-      } else {
-        setGameError('');
-      }
-    } catch {
-      // fail silently
-    }
-  }, [activeGameId]);
-
-  // Actions: SUBMIT MOVE
-  const handleMoveSubmitted = useCallback(async (move: MoveCoordinates) => {
-    if (!activeGameId) return;
-    try {
-      // Determine sender
-      let actingPlayerId = userId;
-      if (sandboxModeActive) {
-        const g = activeGameRef.current!;
-        actingPlayerId = g.turn === 'red' ? g.host.id : g.guest!.id;
-      }
-
-      const response = await fetch('/api/games/move', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: actingPlayerId,
-          gameId: activeGameId,
-          move,
-        }),
-      });
-
-      if (!response.ok) {
-        const d = await response.json();
-        setGameError(d.error || 'Jogada inválida rejeitada.');
-      } else {
-        setGameError('');
-      }
-    } catch {
-      // ignore
-    }
-  }, [activeGameId, userId, sandboxModeActive]);
-
-  // Actions: RESIGN MATCH
+  // Actions: LEAVE GAME ARENA
   const handleResign = useCallback(async (actorId: string) => {
     if (!activeGameId) return;
     try {
@@ -750,25 +671,6 @@ export default function App() {
       // fail
     }
   }, [activeGameId]);
-
-  // Actions: CANCEL WAITING GAME
-  const handleCancelGame = async () => {
-    if (!activeGameId) return;
-    if (!window.confirm('Confirmar cancelamento da mesa em andamento? O valor reterá de volta para sua conta.')) return;
-
-    try {
-      const response = await fetch('/api/games/cancel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hostId: userId, gameId: activeGameId }),
-      });
-      if (response.ok) {
-        handleExitToLobby();
-      }
-    } catch {
-      // fail
-    }
-  };
 
   // Actions: SEND CHAT
   const handleSendChat = useCallback(async (e: React.FormEvent) => {
@@ -811,14 +713,6 @@ export default function App() {
     setCurrentView('lobby');
     if (player) fetchProfile(player.id);
   }, [player]);
-
-  const copyRoomInviteLink = () => {
-    if (!activeGameId) return;
-    const path = `${window.location.origin}/?joinRoom=${activeGameId}`;
-    navigator.clipboard.writeText(path);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2500);
-  };
 
   // Determine user visual role on checkers layout board
   let layoutUserColorRole: PlayerColor | 'both' = 'both';
@@ -1117,6 +1011,9 @@ export default function App() {
     );
   }
 
+  const redCount = useMemo(() => activeGame ? activeGame.pieces.filter(p => p.color === 'red').length : 0, [activeGame?.pieces.length]);
+  const blackCount = useMemo(() => activeGame ? activeGame.pieces.filter(p => p.color === 'black').length : 0, [activeGame?.pieces.length]);
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-stone-100 flex flex-col font-sans select-none antialiased selection:bg-amber-500/30 selection:text-white relative">
       <SparkleBg density={currentView === 'game' ? 2 : 8} />
@@ -1331,8 +1228,8 @@ export default function App() {
                         <span className="text-[10px] text-[#FABF18] font-bold lowercase">escala competitiva</span>
                       </label>
                       <div className="w-full bg-[#EFEAD8] border border-[#D0C9B3] rounded py-2.5 px-3.5 text-xs text-[#5C4033] font-extrabold flex items-center justify-between shadow-sm">
-                        <span className="flex items-center gap-2">👥 MODO MULTIPLAYER (ONLINE)</span>
-                        <span className="bg-[#FABF18]/20 text-[#823a10] text-[9px] px-1.5 py-0.5 rounded font-mono">AUTOMÁTICO</span>
+                        <span className="flex items-center gap-2">🤖 MODO BOT (OFFLINE)</span>
+                        <span className="bg-[#FABF18]/20 text-[#823a10] text-[9px] px-1.5 py-0.5 rounded font-mono">SMART IA</span>
                       </div>
                     </div>
 
@@ -1436,63 +1333,8 @@ export default function App() {
                 />
               )}
 
-              {/* Show matching active rooms */}
-              {lobbyTab === 'play' && (
-                <div className="w-full max-w-4xl mt-8 bg-[#FAF8EB] text-[#4A3B32] border border-[#DCD6C2] rounded-xl p-6 shadow-2xl animate-fade-in">
-                  <div className="border-b border-[#DDD6BF] pb-3 mb-4 flex justify-between items-center flex-wrap gap-2">
-                    <div>
-                      <h3 className="font-extrabold text-base text-[#5C4033] flex items-center gap-1.5">
-                        👥 Salas PVP em Tempo Real Disponíveis
-                      </h3>
-                      <span className="text-xs text-stone-500 font-medium font-sans">Escolha uma aposta em andamento ou aguarde adversários</span>
-                    </div>
-                    <span className="bg-emerald-700 text-stone-100 font-mono text-[9px] tracking-wider px-2 py-1 rounded">MURAL ONLINE</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[220px] overflow-y-auto pr-1">
-                    {lobbyGames.length > 0 ? (
-                      lobbyGames.map((game) => {
-                        const guestDisplay = game.guest ? game.guest.name : 'Vaga Aberta';
-                        return (
-                          <div key={game.id} className="bg-white border border-[#DDD6BF] hover:border-amber-400 p-3.5 rounded flex items-center justify-between gap-4 transition-all shadow-sm">
-                            <div className="flex-1 flex items-center gap-3">
-                              <div className="bg-[#EFEAD8] px-2.5 py-1.5 rounded text-center min-w-[70px]">
-                                <span className="text-[8px] block uppercase text-stone-550 font-bold leading-none">Aposta</span>
-                                <span className="text-xs font-mono font-black text-[#823a10]">R$ {game.betAmount}</span>
-                              </div>
-                              <div className="min-w-0">
-                                <div className="text-xs font-black text-stone-800 truncate">{game.host.name} vs {guestDisplay}</div>
-                                <div className="text-[10px] text-stone-500 mt-0.5 font-mono">Prêmio total: R$ {(game.betAmount * 1.8).toFixed(2)} (Taxa de 10%)</div>
-                              </div>
-                            </div>
-
-                            {game.host.id === userId ? (
-                              <span className="text-[9px] bg-stone-100 font-mono text-stone-500 px-2 py-1.5 rounded border border-stone-200 uppercase">Sua Mesa</span>
-                            ) : (
-                              <button
-                                onClick={() => handleJoinGame(game.id)}
-                                disabled={joinLoading}
-                                className="bg-[#FABF18] hover:bg-[#e0ab12] text-[#142c23] hover:scale-105 transition-all duration-150 font-bold text-xs px-3.5 py-1.5 rounded cursor-pointer uppercase transition-colors"
-                              >
-                                Entrar
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <div className="col-span-1 md:col-span-2 text-center py-8 border border-dashed border-stone-300 rounded bg-white/40">
-                        <p className="text-xs font-bold text-[#6B5A4D]">Sem mesas ativas criadas no momento.</p>
-                        <p className="text-[11px] text-stone-500 mt-1">Configure uma aposta e clique no botão marrom 'CRIAR SALA' acima!</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
               {/* Weekly Ranking + Last Winners Section */}
-              {lobbyGames.length >= 0 && (
-                <div className="w-full max-w-4xl mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4 z-10">
+              <div className="w-full max-w-4xl mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4 z-10">
                   
                   {/* TOP 10 Ranking Semanal */}
                   <motion.div
@@ -1597,10 +1439,9 @@ export default function App() {
                   </motion.div>
 
                 </div>
-              )}
 
-            </div>
-          )}
+              </div>
+            )}
 
           {/* VIEW B: ACTIVE CHEQUER GAME STAGE AND COMBAT RULES */}
           {currentView === 'game' && activeGame && (
@@ -1631,89 +1472,25 @@ export default function App() {
                 
                 {/* Arena Left panel - Checkers widget board container */}
                 <div className="lg:col-span-8 bg-[#151515]/85 border border-stone-800 rounded-lg p-2 sm:p-6 lg:p-8 shadow-2xl flex flex-col items-center justify-center min-h-[350px] sm:min-h-[480px] md:min-h-[580px] w-full overflow-x-hidden">
-                  
-                  {/* Pre-Match Stakes confirmations screens */}
-                  {(activeGame.status === 'waiting_for_challenger' || activeGame.status === 'bet_confirmation') ? (
-                    <div className="py-6 text-center space-y-6 max-w-md w-full">
-                      <div className="bg-[#FAF8EB] text-[#4A3B32] border border-[#DDD6BF] p-6 rounded-lg shadow-xl space-y-1.5 text-center">
-                        <span className="text-[10px] text-stone-500 font-mono uppercase tracking-widest block">Custódia Coletiva do Payout</span>
-                        <div className="text-3xl font-mono font-black text-[#823a10]">R$ {activeGame.betAmount.toFixed(2)}</div>
-                        <p className="text-xs text-stone-600 leading-relaxed pt-2">Ambos depositam valor idêntico seguro. O vencedor leva a totalidade do prêmio de R$ {activeGame.prizePool.toFixed(2)} com amortecimento de 10% da taxa sistêmica.</p>
-                      </div>
-
-                      {activeGame.status === 'waiting_for_challenger' ? (
-                        <div className="space-y-4">
-                          <p className="text-xs text-stone-300 font-mono">Mesa criada com sucesso! Envie o link abaixo para outro jogador:</p>
-                          <input
-                            type="text"
-                            readOnly
-                            value={`${window.location.origin}/?joinRoom=${activeGame.id}`}
-                            className="bg-[#111] border border-stone-800 p-2.5 text-[11px] text-amber-400 font-mono w-full rounded text-center select-all focus:outline-none"
-                          />
-                          <button
-                            onClick={copyRoomInviteLink}
-                            className="bg-[#FABF18] text-[#142c23] hover:bg-[#e0ab12] transition-colors px-4 py-2.5 rounded text-xs font-black uppercase shadow tracking-wider cursor-pointer"
-                          >
-                            {copiedLink ? 'Link Copiado!' : 'Copiar Link de Convite'}
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          <h4 className="text-sm font-black text-amber-400 animate-pulse uppercase tracking-wider">⚠️ RIVAL ENCONTRADO! CONFIRMANDO APOSTAS</h4>
-                          
-                          {/* Ready actions checking */}
-                          <div className="grid grid-cols-2 gap-3 text-left">
-                            <div className="bg-[#222] p-3 rounded border border-stone-800">
-                              <span className="text-[9px] uppercase font-mono text-stone-500 block mb-0.5">Jogador A (Anfitrião)</span>
-                              <div className="text-xs font-bold text-stone-200 truncate">{activeGame.host.name}</div>
-                              <div className="mt-2.5">
-                                {activeGame.hostReady ? (
-                                  <span className="bg-emerald-950/80 text-emerald-400 px-2 py-1 rounded text-[10px] font-bold border border-emerald-800/60 uppercase">Confirmado</span>
-                                ) : (
-                                  userId === activeGame.host.id || sandboxModeActive ? (
-                                    <button onClick={() => handleConfirmBet(activeGame.host.id)} className="bg-[#FABF18] text-stone-950 font-extrabold text-[10px] px-2.5 py-1 rounded uppercase tracking-wider cursor-pointer">Confirmar</button>
-                                  ) : <span className="text-[10px] text-stone-500 italic">Aguardando...</span>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="bg-[#222] p-3 rounded border border-stone-800">
-                              <span className="text-[9px] uppercase font-mono text-stone-500 block mb-0.5">Jogador B (Desafiante)</span>
-                              <div className="text-xs font-bold text-stone-200 truncate">{activeGame.guest?.name}</div>
-                              <div className="mt-2.5">
-                                {activeGame.guestReady ? (
-                                  <span className="bg-emerald-950/80 text-emerald-400 px-2 py-1 rounded text-[10px] font-bold border border-emerald-800/60 uppercase">Confirmado</span>
-                                ) : (
-                                  userId === activeGame.guest?.id || sandboxModeActive ? (
-                                    <button onClick={() => handleConfirmBet(activeGame.guest!.id)} className="bg-[#FABF18] text-stone-950 font-extrabold text-[10px] px-2.5 py-1 rounded uppercase tracking-wider cursor-pointer">Confirmar</button>
-                                  ) : <span className="text-[10px] text-stone-500 italic">Aguardando...</span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    /* Checkers interactive board screen */
-                    /* Checkers interactive board screen */
-                    <div className="w-full flex flex-col items-center justify-center max-w-xl mx-auto space-y-4">
-                      
-                      {/* Player tag indicator B (Oponente - Topo) */}
-                      <div className={`px-4 py-2.5 rounded-lg border text-left w-full flex items-center justify-between gap-3 ${
-                        activeGame.turn === 'black' && activeGame.status === 'active'
-                          ? 'bg-[#FABF18]/10 text-amber-300 border-[#FABF18]/40 shadow-md'
-                          : 'bg-[#1a1a1b]/40 border-stone-850 opacity-80 text-[#ccc]'
-                      }`}>
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span className={`w-2 h-2 rounded-full inline-block shrink-0 ${
-                            activeGame.turn === 'black' && activeGame.status === 'active' ? 'bg-[#FABF18] animate-pulse shadow-[0_0_8px_rgba(250,191,24,0.6)]' : 'bg-stone-500'
-                          }`} />
-                          <span className="text-xs font-bold text-stone-100 truncate">{activeGame.guest?.name}</span>
-                          <span className="text-[10px] font-black uppercase text-stone-400 font-mono tracking-wider ml-1">PRETO</span>
+                   
+                   {/* Checkers interactive board screen */}
+                   <div className="w-full flex flex-col items-center justify-center max-w-xl mx-auto space-y-4">
+                     
+                     {/* Player tag indicator B (Oponente - Topo) */}
+                     <div className={`px-4 py-2.5 rounded-lg border text-left w-full flex items-center justify-between gap-3 ${
+                       activeGame.turn === 'black' && activeGame.status === 'active'
+                         ? 'bg-[#FABF18]/10 text-amber-300 border-[#FABF18]/40 shadow-md'
+                         : 'bg-[#1a1a1b]/40 border-stone-850 opacity-80 text-[#ccc]'
+                     }`}>
+                       <div className="flex items-center gap-2.5 min-w-0">
+                         <span className={`w-2 h-2 rounded-full inline-block shrink-0 ${
+                           activeGame.turn === 'black' && activeGame.status === 'active' ? 'bg-[#FABF18] animate-pulse shadow-[0_0_8px_rgba(250,191,24,0.6)]' : 'bg-stone-500'
+                         }`} />
+                         <span className="text-xs font-bold text-stone-100 truncate">{activeGame.guest?.name}</span>
+                         <span className="text-[10px] font-black uppercase text-stone-400 font-mono tracking-wider ml-1">PRETO</span>
                           {activeGame.isBotGame && (
-                            (() => {
-                              const currentCount = player?.botGamesPlayed || 0;
+                             (() => {
+                               const currentCount = botGamesPlayed;
                               if (currentCount === 0) {
                                 return (
                                   <span className="text-[9px] bg-emerald-950/40 text-emerald-300 border border-emerald-800/40 px-2 py-0.5 rounded font-black font-sans uppercase ml-2 select-none shrink-0">
@@ -1776,18 +1553,18 @@ export default function App() {
                               <div className="flex items-center gap-1 bg-[#161618] border border-stone-850 px-3 py-1 rounded-lg">
                                 <div className="flex items-center gap-1 text-red-500 font-bold font-mono text-xs" title="Suas Peças (Vermelho)">
                                   <span className="w-2.5 h-2.5 rounded-full bg-red-650 inline-block border border-red-400" />
-                                  {activeGame.pieces.filter(p => p.color === 'red').length}
+                                  {redCount}
                                 </div>
                                 <div className="w-px h-3.5 bg-stone-800 mx-1.5" />
                                 <div className="flex items-center gap-1 text-[#FABF18] font-bold font-mono text-xs" title="Peças do Rival (Preto)">
                                   <span className="w-2.5 h-2.5 rounded-full bg-stone-950 inline-block border border-[#FABF18]" />
-                                  {activeGame.pieces.filter(p => p.color === 'black').length}
+                                  {blackCount}
                                 </div>
                               </div>
                               <div className="hidden sm:flex items-center gap-1.5 text-[9px] text-stone-500 font-mono border-l border-stone-800 pl-2">
-                                <span className="text-red-400">-{Math.max(0, 12 - activeGame.pieces.filter(p => p.color === 'red').length)}</span>
+                                <span className="text-red-400">-{Math.max(0, 12 - redCount)}</span>
                                 <span className="text-stone-600">/</span>
-                                <span className="text-amber-400">-{Math.max(0, 12 - activeGame.pieces.filter(p => p.color === 'black').length)}</span>
+                                <span className="text-amber-400">-{Math.max(0, 12 - blackCount)}</span>
                               </div>
                             </div>
                           </div>
@@ -1916,12 +1693,11 @@ export default function App() {
                           <span className="text-[10px] font-black uppercase text-stone-400 font-mono tracking-wider ml-1">VERMELHO</span>
                         </div>
                         {activeGame.winnerId === activeGame.host.id && <span className="text-[9px] bg-emerald-700 text-stone-100 px-1.5 py-0.5 rounded font-black font-sans uppercase animate-bounce">Ganhou!</span>}
-                      </div>
+                </div>
 
-                    </div>
-                  )}
+              </div>
 
-                  {/* Active match results screen Overlay */}
+            {/* Active match results screen Overlay */}
                   {activeGame.status === 'finished' && (
                     <div className="mt-6 w-full p-4 bg-[#1e1a17] border-2 border-[#FABF18]/45 text-center rounded space-y-3">
                       <h4 className="text-sm font-black text-[#FABF18] uppercase tracking-wider">Combate Concluído</h4>
@@ -2155,7 +1931,7 @@ export default function App() {
               <span>•</span>
               <span className="hover:underline cursor-pointer">👑 Torneio de Elite Online</span>
               <span>•</span>
-              <span className="hover:underline cursor-pointer">👑 Duelos PVP Customizados</span>
+              <span className="hover:underline cursor-pointer">👑 Duelos BOT Inteligente</span>
             </div>
           </div>
 
