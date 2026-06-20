@@ -196,7 +196,7 @@ export default function App() {
         const res = await fetch('/api/stats');
         const data = await res.json();
         setOnlinePlayers(data.onlinePlayers);
-        setActiveMatches(data.activeMatches);
+        if (data.activeMatches > 0) setActiveMatches(data.activeMatches);
       } catch {}
     };
     const fetchRanking = async () => {
@@ -210,7 +210,7 @@ export default function App() {
       try {
         const res = await fetch('/api/ranking/last-winners');
         const data = await res.json();
-        setLastWinners(data.winners || []);
+        if (data.winners && data.winners.length > 0) setLastWinners(data.winners);
       } catch {}
     };
 
@@ -218,6 +218,11 @@ export default function App() {
     const statsInt = setInterval(fetchStats, 5000);
     const rankInt = setInterval(fetchRanking, 30000);
     const winInt = setInterval(fetchWinners, 15000);
+
+    const fakeStatsInt = setInterval(() => {
+      setOnlinePlayers(800 + Math.floor(Math.random() * 500));
+      setActiveMatches(150 + Math.floor(Math.random() * 200));
+    }, 30000);
 
     const fakeWinInt = setInterval(() => {
       const values = [5, 10, 15, 20, 25, 50];
@@ -231,7 +236,7 @@ export default function App() {
       });
     }, 30000);
 
-    return () => { clearInterval(statsInt); clearInterval(rankInt); clearInterval(winInt); clearInterval(fakeWinInt); };
+    return () => { clearInterval(statsInt); clearInterval(rankInt); clearInterval(winInt); clearInterval(fakeStatsInt); clearInterval(fakeWinInt); };
   }, []);
 
   const triggerEmojiReaction = (emoji: string) => {
@@ -1258,8 +1263,8 @@ export default function App() {
                         <span className="text-[10px] text-[#FABF18] font-bold lowercase">escala competitiva</span>
                       </label>
                       <div className="w-full bg-[#EFEAD8] border border-[#D0C9B3] rounded py-2.5 px-3.5 text-xs text-[#5C4033] font-extrabold flex items-center justify-between shadow-sm">
-                        <span className="flex items-center gap-2">🤖 MODO BOT (OFFLINE)</span>
-                        <span className="bg-[#FABF18]/20 text-[#823a10] text-[9px] px-1.5 py-0.5 rounded font-mono">SMART IA</span>
+                        <span className="flex items-center gap-2">👥 MODO MULTIPLAYER (PVP)</span>
+                        <span className="bg-[#FABF18]/20 text-[#823a10] text-[9px] px-1.5 py-0.5 rounded font-mono">AUTOMÁTICO</span>
                       </div>
                     </div>
 
