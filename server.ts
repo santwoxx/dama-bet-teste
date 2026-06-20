@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import { kv } from '@vercel/kv';
 import { initializeBoard, getValidMoves, executeMove, checkGameOver } from './src/utils/checkers';
 import { Game, Player, Message, Transaction, GameStatus, PlayerColor, MoveCoordinates, Piece } from './src/types';
 
@@ -136,34 +137,64 @@ function recordWin(playerName: string, playerId: string, amount: number) {
   if (lastWinners.length > 50) lastWinners.length = 50;
 }
 
-// JSON File Database Persistence
+// Database persistence — file (local) + Vercel KV (production)
 const DB_DIR = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), '.data');
 const DB_FILE = path.join(DB_DIR, 'users-db.json');
 
-// Ensure data directory exists
 if (!fs.existsSync(DB_DIR)) {
   fs.mkdirSync(DB_DIR, { recursive: true });
 }
 
+const kvAvailable = !!(process.env.KV_URL || process.env.KV_REST_API_URL);
+
+function buildDbPayload() {
+  return {
+    users: Array.from(users.entries()),
+    transactions: Array.from(transactions.entries()),
+    sessions: Array.from(sessions.entries()),
+  };
+}
+
+function restoreFromPayload(dbPayload: any) {
+  if (dbPayload.users) {
+    users.clear();
+    for (const [key, val] of dbPayload.users) {
+      users.set(key, val);
+    }
+  }
+  if (dbPayload.transactions) {
+    transactions.clear();
+    for (const [key, val] of dbPayload.transactions) {
+      transactions.set(key, val);
+    }
+  }
+  if (dbPayload.sessions) {
+    sessions.clear();
+    for (const [key, val] of dbPayload.sessions) {
+      sessions.set(key, val);
+    }
+  }
+}
+
 function saveDb() {
   try {
-    const dataUsers = Array.from(users.entries());
-    const dataTx = Array.from(transactions.entries());
-    const dataSessions = Array.from(sessions.entries());
-    const dbPayload = {
-      users: dataUsers,
-      transactions: dataTx,
-      sessions: dataSessions,
-    };
+    const dbPayload = buildDbPayload();
     fs.writeFileSync(DB_FILE, JSON.stringify(dbPayload, null, 2), 'utf-8');
   } catch (err) {
     console.error('Error saving JSON database:', err);
   }
+  // Fire-and-forget KV sync
+  if (kvAvailable) {
+    const dbPayload = buildDbPayload();
+    kv.set('db_payload', JSON.stringify(dbPayload)).catch((err: any) => {
+      console.error('Error saving to KV:', err);
+    });
+  }
 }
 
 function loadDb() {
+  // File fallback (local dev / Vercel without KV)
   try {
-    // Try new path first, fall back to old path
     let dbPath = DB_FILE;
     const oldPath = path.join(process.cwd(), 'users-db.json');
     if (!fs.existsSync(dbPath) && fs.existsSync(oldPath)) {
@@ -171,38 +202,32 @@ function loadDb() {
     }
     if (fs.existsSync(dbPath)) {
       const raw = fs.readFileSync(dbPath, 'utf-8');
-      const dbPayload = JSON.parse(raw);
-      if (dbPayload.users) {
-        users.clear();
-        for (const [key, val] of dbPayload.users) {
-          users.set(key, val);
-        }
-      }
-      if (dbPayload.transactions) {
-        transactions.clear();
-        for (const [key, val] of dbPayload.transactions) {
-          transactions.set(key, val);
-        }
-      }
-      if (dbPayload.sessions) {
-        sessions.clear();
-        for (const [key, val] of dbPayload.sessions) {
-          sessions.set(key, val);
-        }
-      }
-      console.log(`Database loaded from ${dbPath}. Total users: ${users.size}, Total txs: ${transactions.size}, Sessions: ${sessions.size}`);
+      restoreFromPayload(JSON.parse(raw));
+      console.log(`Database loaded from ${dbPath}. Total users: ${users.size}, Txs: ${transactions.size}, Sessions: ${sessions.size}`);
     } else {
       console.log('No existing database file found. Fresh instance created.');
     }
   } catch (err) {
     console.error('Error loading JSON database:', err);
   }
+  // Fire-and-forget KV load — overwrites file data with KV if available
+  if (kvAvailable) {
+    kv.get('db_payload').then((raw: any) => {
+      if (raw) {
+        const dbPayload = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        restoreFromPayload(dbPayload);
+        console.log(`Database loaded from KV. Users: ${users.size}, Txs: ${transactions.size}, Sessions: ${sessions.size}`);
+      }
+    }).catch((err: any) => {
+      console.error('Error loading from KV:', err);
+    });
+  }
 }
 
-// Load database immediately (data survives in /tmp on Vercel within the same warm instance)
+// Load database immediately
 loadDb();
 
-// Periodic auto-save — only on non-serverless environments to avoid keeping the event loop alive on Vercel
+// Periodic auto-save — only on non-serverless environments
 if (!process.env.VERCEL) {
   setInterval(() => {
     saveDb();
