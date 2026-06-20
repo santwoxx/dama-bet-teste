@@ -636,7 +636,36 @@ export default function App() {
     }
   };
 
+  // Actions: SUBMIT MOVE
+  const handleMoveSubmitted = useCallback(async (move: MoveCoordinates) => {
+    if (!activeGameId) return;
+    try {
+      let actingPlayerId = userId;
+      if (sandboxModeActive) {
+        const g = activeGameRef.current!;
+        actingPlayerId = g.turn === 'red' ? g.host.id : g.guest!.id;
+      }
 
+      const response = await fetch('/api/games/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: actingPlayerId,
+          gameId: activeGameId,
+          move,
+        }),
+      });
+
+      if (!response.ok) {
+        const d = await response.json();
+        setGameError(d.error || 'Jogada inválida rejeitada.');
+      } else {
+        setGameError('');
+      }
+    } catch {
+      // ignore
+    }
+  }, [activeGameId, userId, sandboxModeActive]);
 
   // Actions: LEAVE GAME ARENA
   const handleResign = useCallback(async (actorId: string) => {
