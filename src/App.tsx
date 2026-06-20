@@ -4,7 +4,7 @@ import { Game, Player, Transaction, MoveCoordinates, PlayerColor } from './types
 import Header from './components/Header';
 import CheckersBoard from './components/CheckersBoard';
 import ReferralsDashboard from './components/ReferralsDashboard';
-const VictoryAnimation = React.lazy(() => import('./components/VictoryAnimation'));
+import VictoryAnimation from './components/VictoryAnimation';
 import { playReactionSound, playWinSound, playMoveSound, playCaptureSound } from './utils/audio';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -2196,19 +2196,17 @@ export default function App() {
       {/* Victory Celebration Dynamic Modal with confetti rain */}
       <AnimatePresence>
         {showVictoryOverlay && activeGame && activeGame.status === 'finished' && (
-          <React.Suspense fallback={null}>
-            <VictoryAnimation
-              winnerName={activeGame.winnerId ? (activeGame.winnerId === activeGame.host.id ? activeGame.host.name : activeGame.guest?.name || 'Adversário') : ''}
-              isDraw={!activeGame.winnerId}
-              isPlayerWinner={activeGame.winnerId === userId}
-              prize={activeGame.prizePool}
-              balance={player ? player.balance : 0}
-              onClose={() => {
-                setShowVictoryOverlay(false);
-                handleExitToLobby();
-              }}
-            />
-          </React.Suspense>
+          <VictoryAnimation
+            winnerName={activeGame.winnerId ? (activeGame.winnerId === activeGame.host.id ? activeGame.host.name : activeGame.guest?.name || 'Adversário') : ''}
+            isDraw={!activeGame.winnerId}
+            isPlayerWinner={activeGame.winnerId === userId}
+            prize={activeGame.prizePool}
+            balance={player ? player.balance : 0}
+            onClose={() => {
+              setShowVictoryOverlay(false);
+              handleExitToLobby();
+            }}
+          />
         )}
       </AnimatePresence>
 
