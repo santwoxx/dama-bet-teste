@@ -122,7 +122,7 @@ export default function App() {
   const [sandboxModeActive, setSandboxModeActive] = useState<boolean>(false);
 
   // Paciencia.co Customization parameters
-  const [pacienciaGameMode, setPacienciaGameMode] = useState<'BOT' | 'PVP' | 'SANDBOX'>('BOT');
+
   const [selectedDifficulty, setSelectedDifficulty] = useState<'FÁCIL' | 'MÉDIO' | 'DIFÍCIL' | 'ULTRA'>('MÉDIO');
   const [boardConfig, setBoardConfig] = useState<'8X8-8' | '8X8-12' | '10X10-20'>('8X8-12');
   
@@ -628,77 +628,7 @@ export default function App() {
     }
   };
 
-  // Actions trigger: START BOT GAME
-  const handleStartBotGame = async () => {
-    setLobbyError('');
-    if (!player) return;
 
-    if (player.balance < betAmount) {
-      setLobbyError(`Saldo insuficiente (R$ ${player.balance.toFixed(2)}) menor que aposta de R$ ${betAmount.toFixed(2)} para desafiar o oponente.`);
-      return;
-    }
-
-    setCreateLoading(true);
-    try {
-      const response = await fetch('/api/games/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hostId: userId, betAmount, isBotGame: true }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro desconhecido');
-      }
-
-      setActiveGameId(data.game.id);
-      setActiveGame(data.game);
-      setCurrentView('game');
-      fetchProfile(userId);
-    } catch (err: any) {
-      setLobbyError(err.message || 'Erro ao criar desafio.');
-    } finally {
-      setCreateLoading(false);
-    }
-  };
-
-  // Actions trigger: CREATE LOCAL SANDBOX GAME
-  const handleStartSandboxSimulator = async () => {
-    setLobbyError('');
-    if (!player || !secondaryPlayer) return;
-
-    setCreateLoading(true);
-    setSandboxModeActive(true);
-    try {
-      const response = await fetch('/api/games/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hostId: userId, betAmount, isLocalSandbox: true }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro desconhecido');
-      }
-
-      // Automatically join secondary user to sandbox game
-      const joinResponse = await fetch('/api/games/join', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ guestId: secondaryUserId, gameId: data.game.id }),
-      });
-      const joinData = await joinResponse.json();
-
-      setActiveGameId(data.game.id);
-      setActiveGame(joinData.game || data.game);
-      setCurrentView('game');
-      fetchProfile(userId);
-    } catch (err: any) {
-      setLobbyError(err.message || 'Erro na sandbox local.');
-    } finally {
-      setCreateLoading(false);
-    }
-  };
 
   // Actions: JOIN MATCH
   const handleJoinGame = async (gameId: string) => {
@@ -1439,7 +1369,7 @@ export default function App() {
                     <div className="pt-2">
                       <button
                         id="btn-paciencia-launch-bot"
-                        onClick={handleStartBotGame}
+                        onClick={handleCreateGame}
                         disabled={createLoading}
                         className="w-full bg-gradient-to-r from-[#FABF18] via-[#d97706] to-[#FABF18] text-stone-950 font-black py-4 px-4 rounded-lg shadow-lg uppercase text-sm tracking-wider cursor-pointer active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 relative overflow-hidden btn-shimmer hover:shadow-[0_0_30px_rgba(250,191,24,0.4)] group"
                         style={{ backgroundSize: '200% 100%' }}
@@ -1491,79 +1421,7 @@ export default function App() {
 
                 </motion.div>
 
-                {/* Right callout placard - Tigrinho Enhanced */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.4, delay: 0.2 }}
-                  className="hidden md:block max-w-sm w-full relative z-10"
-                >
-                  <div className="bg-[#1c1917]/95 backdrop-blur border-2 border-[#FABF18] text-stone-100 p-6 rounded-xl shadow-2xl space-y-5 card-glow relative overflow-hidden">
-                    {/* Animated glow orb */}
-                    <motion.div
-                      className="absolute -top-10 -right-10 w-32 h-32 bg-[#FABF18]/8 rounded-full blur-2xl"
-                      animate={{ scale: [1, 1.2, 1], opacity: [0.05, 0.12, 0.05] }}
-                      transition={{ duration: 5, repeat: Infinity }}
-                    />
-                    
-                    {/* DAMA.BET Mini Banner */}
-                    <div className="text-center bg-gradient-to-r from-[#143d22] to-[#07190e] border border-[#FABF18]/50 py-3 px-4 rounded-lg shadow-inner relative overflow-hidden">
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(250,191,24,0.08)_0%,transparent_70%)]" />
-                      <h4 className="font-sans font-black text-2xl tracking-tight uppercase italic drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] relative">
-                        <span className="text-white">Dama</span>
-                        <span className="text-[#FABF18] gold-glow">Bet</span>
-                      </h4>
-                      <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest mt-0.5 font-sans relative">✦ Mesa de Apostas Certificada ✦</p>
-                    </div>
 
-                    <p className="text-xs text-stone-300 leading-relaxed font-sans font-medium text-center">
-                      Jogue Damas contra nossa IA tática de alto desempenho ou crie disputas PVP seguras de saldo instantâneo!
-                    </p>
-
-                    {/* Image Mascot Showcase */}
-                    <div className="relative group overflow-hidden rounded-lg border border-stone-800 bg-black/40 p-2 flex flex-col items-center">
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#FABF18]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <img 
-                        src="https://i.ibb.co/Qjxgcs76/Whats-App-Image-2026-06-16-at-00-39-02.jpg" 
-                        alt="Dama Bet Mascot" 
-                        className="w-44 h-auto rounded object-cover shadow-lg hover:scale-105 transition-transform duration-300 ring-2 ring-emerald-900 group-hover:ring-[#FABF18]/50"
-                        referrerPolicy="no-referrer"
-                      />
-                      <motion.span
-                        className="text-[10px] text-[#FABF18] uppercase tracking-wider font-extrabold mt-2"
-                        animate={{ opacity: [0.5, 1, 0.5] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                      >
-                        👑 DESAFIE O MASCOTE DamaBet
-                      </motion.span>
-                    </div>
-
-                    {/* 5 Bottom indicators from the Image */}
-                    <div className="pt-3 border-t border-stone-850/80 grid grid-cols-5 gap-1 text-center">
-                      <div className="flex flex-col items-center">
-                        <span className="text-base select-none">📈</span>
-                        <span className="text-[8.5px] font-black text-[#FABF18] uppercase tracking-tighter mt-1">ROI</span>
-                      </div>
-                      <div className="flex flex-col items-center">
-                        <span className="text-base select-none">💰</span>
-                        <span className="text-[8.5px] font-black text-[#FABF18] uppercase tracking-tighter mt-1">CASHOUT</span>
-                      </div>
-                      <div className="flex flex-col items-center">
-                        <span className="text-base select-none">💎</span>
-                        <span className="text-[8.5px] font-black text-[#FABF18] uppercase tracking-tighter mt-1">VIP</span>
-                      </div>
-                      <div className="flex flex-col items-center">
-                        <span className="text-base select-none">🛡️</span>
-                        <span className="text-[8.5px] font-black text-[#FABF18] uppercase tracking-tighter mt-1">SSL</span>
-                      </div>
-                      <div className="flex flex-col items-center">
-                        <span className="text-base select-none">🎯</span>
-                        <span className="text-[8.5px] font-black text-[#FABF18] uppercase tracking-tighter mt-1">RTP</span>
-                      </div>
-                    </div>
-
-                  </div>
-                </motion.div>
 
               </div>
                 </>
@@ -1578,8 +1436,8 @@ export default function App() {
                 />
               )}
 
-              {/* Show matching active rooms when PVP Online mode is picked */}
-              {lobbyTab === 'play' && pacienciaGameMode === 'PVP' && (
+              {/* Show matching active rooms */}
+              {lobbyTab === 'play' && (
                 <div className="w-full max-w-4xl mt-8 bg-[#FAF8EB] text-[#4A3B32] border border-[#DCD6C2] rounded-xl p-6 shadow-2xl animate-fade-in">
                   <div className="border-b border-[#DDD6BF] pb-3 mb-4 flex justify-between items-center flex-wrap gap-2">
                     <div>
