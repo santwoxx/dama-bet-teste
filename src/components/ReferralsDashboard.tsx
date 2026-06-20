@@ -241,18 +241,7 @@ export default function ReferralsDashboard({
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
-  const handleSocialShare = (platform: 'whatsapp' | 'telegram' | 'facebook') => {
-    let url = '';
-    const text = encodeURIComponent(`👉 Jogue Damas de Apostas na DamaBet! Inscreva-se pelo meu link de afiliado oficial para ativar saldo grátis e dobrar seu caixa: ${inviteUrl}`);
-    if (platform === 'whatsapp') {
-      url = `https://api.whatsapp.com/send?text=${text}`;
-    } else if (platform === 'telegram') {
-      url = `https://t.me/share/url?url=${encodeURIComponent(inviteUrl)}&text=${text}`;
-    } else {
-      url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(inviteUrl)}`;
-    }
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
+
 
   const onClaimPress = async (reward: number, key: string) => {
     setClaimLoading(key);
@@ -366,8 +355,8 @@ export default function ReferralsDashboard({
               <Share2 className="w-5 h-5 text-[#FABF18]" />
             </div>
             <div>
-              <h3 className="font-black text-sm uppercase text-[#FABF18] tracking-wide">COMPARTILHAR ATALHO DA FORTUNA</h3>
-              <p className="text-[10px] text-stone-400">Divulgue e construa seu império de faturamento passivo</p>
+              <h3 className="font-black text-sm uppercase text-[#FABF18] tracking-wide">CONVITE VIP DO TIGRINHO</h3>
+              <p className="text-[10px] text-stone-400">Compartilhe seu link e lucre com a rede</p>
             </div>
           </div>
 
@@ -396,27 +385,7 @@ export default function ReferralsDashboard({
                 </div>
               </div>
 
-              {/* Instant Social Share Rails - Tigrinho Enhanced */}
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => handleSocialShare('whatsapp')}
-                  className="bg-[#25D366] hover:bg-[#1ebd59] text-white py-2 px-2.5 rounded-lg font-black text-[10px] sm:text-xs flex items-center justify-center gap-1.5 uppercase tracking-wider transition-transform active:scale-95 cursor-pointer hover:shadow-[0_0_15px_rgba(37,211,102,0.4)] relative overflow-hidden"
-                >
-                  <span className="text-sm">💬</span> WhatsApp
-                </button>
-                <button
-                  onClick={() => handleSocialShare('telegram')}
-                  className="bg-[#0088cc] hover:bg-[#007cbd] text-white py-2 px-2.5 rounded-lg font-black text-[10px] sm:text-xs flex items-center justify-center gap-1.5 uppercase tracking-wider transition-transform active:scale-95 cursor-pointer hover:shadow-[0_0_15px_rgba(0,136,204,0.4)] relative overflow-hidden"
-                >
-                  <span className="text-sm">✈️</span> Telegram
-                </button>
-                <button
-                  onClick={() => handleSocialShare('facebook')}
-                  className="bg-[#1877F2] hover:bg-[#1464cc] text-white py-2 px-2.5 rounded-lg font-black text-[10px] sm:text-xs flex items-center justify-center gap-1.5 uppercase tracking-wider transition-transform active:scale-95 cursor-pointer hover:shadow-[0_0_15px_rgba(24,119,242,0.4)] relative overflow-hidden"
-                >
-                  <span className="text-sm">🔵</span> Facebook
-                </button>
-              </div>
+
             </div>
           </div>
         </div>
