@@ -1,0 +1,6 @@
+{
+  "name": "Dama Bet",
+  "description": "Jogo de damas multiplayer online com apostas virtuais seguras, taxa de 10% da plataforma e disputas em tempo real.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
