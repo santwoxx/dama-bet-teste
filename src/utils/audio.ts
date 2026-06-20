@@ -119,3 +119,59 @@ export function playWinSound() {
     console.warn('Web Audio victory sound failed:', e);
   }
 }
+
+/**
+ * Short click/place sound for normal piece movement
+ */
+export function playMoveSound() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  try {
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, now);
+    osc.frequency.exponentialRampToValueAtTime(900, now + 0.06);
+    gain.gain.setValueAtTime(0.1, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  } catch { /* ignore */ }
+}
+
+/**
+ * Satisfying capture/elimination sound
+ */
+export function playCaptureSound() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  try {
+    const now = ctx.currentTime;
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.type = 'triangle';
+    osc1.frequency.setValueAtTime(500, now);
+    osc1.frequency.exponentialRampToValueAtTime(250, now + 0.15);
+    gain1.gain.setValueAtTime(0.15, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+    osc1.start(now);
+    osc1.stop(now + 0.18);
+
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.type = 'square';
+    osc2.frequency.setValueAtTime(800, now + 0.05);
+    osc2.frequency.exponentialRampToValueAtTime(100, now + 0.2);
+    gain2.gain.setValueAtTime(0.04, now + 0.05);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+    osc2.start(now + 0.05);
+    osc2.stop(now + 0.22);
+  } catch { /* ignore */ }
+}

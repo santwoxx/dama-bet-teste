@@ -4,8 +4,8 @@ import { Game, Player, Transaction, MoveCoordinates, PlayerColor } from './types
 import Header from './components/Header';
 import CheckersBoard from './components/CheckersBoard';
 import ReferralsDashboard from './components/ReferralsDashboard';
-import VictoryAnimation from './components/VictoryAnimation';
-import { playReactionSound, playWinSound } from './utils/audio';
+const VictoryAnimation = React.lazy(() => import('./components/VictoryAnimation'));
+import { playReactionSound, playWinSound, playMoveSound, playCaptureSound } from './utils/audio';
 import { motion, AnimatePresence } from 'motion/react';
 
 // ─── Sparkle Background Overlay (Tigrinho Style) ─────────────────────
@@ -228,6 +228,7 @@ export default function App() {
   const lastChatLengthRef = useRef<number>(0);
   const activeGameRef = useRef<Game | null>(null);
   activeGameRef.current = activeGame;
+  const prevPiecesLenRef = useRef(0);
 
   // 1. Boot up: Verify stored token or prompt login
   useEffect(() => {
@@ -473,16 +474,24 @@ export default function App() {
       sse.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          if (data && data.id) {
-            setActiveGame(data);
-            if (data.status === 'finished') {
-              fetchProfile(userId);
+          const incoming = data && data.id ? data : (data && data.game ? data.game : null);
+          if (!incoming) return;
+
+          if (incoming.status === 'active' && incoming.pieces) {
+            const prevLen = prevPiecesLenRef.current;
+            const curLen = incoming.pieces.length;
+            if (prevLen > 0 && curLen > 0 && curLen !== prevLen) {
+              if (curLen < prevLen) playCaptureSound();
+              else playMoveSound();
+            } else if (prevLen > 0 && curLen === prevLen) {
+              playMoveSound();
             }
-          } else if (data && data.game) {
-            setActiveGame(data.game);
-            if (data.game.status === 'finished') {
-              fetchProfile(userId);
-            }
+            prevPiecesLenRef.current = curLen;
+          }
+
+          setActiveGame(incoming);
+          if (incoming.status === 'finished') {
+            fetchProfile(userId);
           }
         } catch {
           // ignore
@@ -1917,6 +1926,11 @@ export default function App() {
                                   {activeGame.pieces.filter(p => p.color === 'black').length}
                                 </div>
                               </div>
+                              <div className="hidden sm:flex items-center gap-1.5 text-[9px] text-stone-500 font-mono border-l border-stone-800 pl-2">
+                                <span className="text-red-400">-{Math.max(0, 12 - activeGame.pieces.filter(p => p.color === 'red').length)}</span>
+                                <span className="text-stone-600">/</span>
+                                <span className="text-amber-400">-{Math.max(0, 12 - activeGame.pieces.filter(p => p.color === 'black').length)}</span>
+                              </div>
                             </div>
                           </div>
                         )}
@@ -2182,17 +2196,19 @@ export default function App() {
       {/* Victory Celebration Dynamic Modal with confetti rain */}
       <AnimatePresence>
         {showVictoryOverlay && activeGame && activeGame.status === 'finished' && (
-          <VictoryAnimation
-            winnerName={activeGame.winnerId ? (activeGame.winnerId === activeGame.host.id ? activeGame.host.name : activeGame.guest?.name || 'Adversário') : ''}
-            isDraw={!activeGame.winnerId}
-            isPlayerWinner={activeGame.winnerId === userId}
-            prize={activeGame.prizePool}
-            balance={player ? player.balance : 0}
-            onClose={() => {
-              setShowVictoryOverlay(false);
-              handleExitToLobby();
-            }}
-          />
+          <React.Suspense fallback={null}>
+            <VictoryAnimation
+              winnerName={activeGame.winnerId ? (activeGame.winnerId === activeGame.host.id ? activeGame.host.name : activeGame.guest?.name || 'Adversário') : ''}
+              isDraw={!activeGame.winnerId}
+              isPlayerWinner={activeGame.winnerId === userId}
+              prize={activeGame.prizePool}
+              balance={player ? player.balance : 0}
+              onClose={() => {
+                setShowVictoryOverlay(false);
+                handleExitToLobby();
+              }}
+            />
+          </React.Suspense>
         )}
       </AnimatePresence>
 
