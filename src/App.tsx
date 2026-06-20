@@ -1940,27 +1940,49 @@ export default function App() {
 
       {/* SECTION 3: DARK SOLID WOOD FOOTER WITH FLAGS & LABELS */}
       <footer className="bg-[#1C120D] text-stone-400 py-8 px-6 text-xs sm:text-sm border-t border-stone-900 font-sans">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          
-          <div className="flex flex-col items-center sm:items-start gap-1">
-            <span className="text-stone-100 font-black text-lg italic flex items-center gap-0.5 leading-none mb-1">
-              Dama<span className="text-[#FABF18] font-black">Bet</span>
-            </span>
-            <p className="text-[11px] text-[#999]">
-              © 2024-2026 DamaBet, Plataforma de Entretenimento Multi-jogo e Treino. Todos os Direitos Reservados.
-            </p>
+        <div className="max-w-7xl mx-auto flex flex-col items-center gap-6">
+
+          {/* Certificates & Regulatory Info */}
+          <div className="flex flex-col items-center gap-4 w-full">
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <a href="https://ibb.co/nMPTXGwR" target="_blank" rel="noopener noreferrer">
+                <img src="https://i.ibb.co/b5bx4067/Whats-App-Image-2026-06-20-at-01-58-36.jpg" alt="Certificado 1" className="h-20 sm:h-24 rounded border border-stone-700" />
+              </a>
+              <a href="https://ibb.co/99rCgyJz" target="_blank" rel="noopener noreferrer">
+                <img src="https://i.ibb.co/xS7RLzyP/Whats-App-Image-2026-06-20-at-01-58-33.jpg" alt="Certificado 2" className="h-20 sm:h-24 rounded border border-stone-700" />
+              </a>
+            </div>
+            <div className="text-center space-y-1 max-w-2xl">
+              <p className="text-[11px] text-stone-500 font-mono font-bold">
+                NEXUS INTERNATIONAL LTDA — 55.078.134/0001-17
+              </p>
+              <p className="text-[10px] text-stone-600 leading-relaxed">
+                © Betão (Betao) é operado pela OIG Gaming Brazil LTDA, inscrita no CNPJ Nº 55.459.453/0001-72. OIG Gaming é autorizada pela Portaria SPA/MF Nº 2.096, de 30 de Dezembro de 2024. Apostas e jogos disponíveis apenas para maiores de 18 anos.
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-[#FABF18] font-bold">Idioma:</span>
-            <select
-              className="bg-[#2B1D16] border border-stone-800 text-stone-100 font-bold px-3 py-1.5 rounded cursor-pointer focus:outline-none text-xs"
-              defaultValue="pt"
-            >
-              <option value="pt">Português 🇧🇷 ▾</option>
-              <option value="en">English 🇺🇸</option>
-              <option value="es">Español 🇪🇸</option>
-            </select>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full border-t border-stone-800/50 pt-4">
+            <div className="flex flex-col items-center sm:items-start gap-1">
+              <span className="text-stone-100 font-black text-lg italic flex items-center gap-0.5 leading-none mb-1">
+                Dama<span className="text-[#FABF18] font-black">Bet</span>
+              </span>
+              <p className="text-[11px] text-[#999]">
+                © 2024-2026 DamaBet, Plataforma de Entretenimento Multi-jogo e Treino. Todos os Direitos Reservados.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-[#FABF18] font-bold">Idioma:</span>
+              <select
+                className="bg-[#2B1D16] border border-stone-800 text-stone-100 font-bold px-3 py-1.5 rounded cursor-pointer focus:outline-none text-xs"
+                defaultValue="pt"
+              >
+                <option value="pt">Português 🇧🇷 ▾</option>
+                <option value="en">English 🇺🇸</option>
+                <option value="es">Español 🇪🇸</option>
+              </select>
+            </div>
           </div>
 
         </div>
