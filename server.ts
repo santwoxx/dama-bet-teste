@@ -2,7 +2,6 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
-import { createServer as createViteServer } from 'vite';
 import { initializeBoard, getValidMoves, executeMove, checkGameOver } from './src/utils/checkers';
 import { Game, Player, Message, Transaction, GameStatus, PlayerColor, MoveCoordinates, Piece } from './src/types';
 
@@ -2053,6 +2052,7 @@ app.get('/api/ranking/last-winners', (req, res) => {
 // Server boot and hot Vite bundling
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { 
         middlewareMode: true,
@@ -2076,4 +2076,10 @@ async function startServer() {
   });
 }
 
-startServer();
+// Vercel serverless export — no listening, just export the app
+export default app;
+
+// Only start the server when running directly (not on Vercel)
+if (!process.env.VERCEL) {
+  startServer();
+}
