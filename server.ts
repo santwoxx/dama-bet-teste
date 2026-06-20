@@ -137,7 +137,7 @@ function recordWin(playerName: string, playerId: string, amount: number) {
 }
 
 // JSON File Database Persistence
-const DB_DIR = path.join(process.cwd(), '.data');
+const DB_DIR = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), '.data');
 const DB_FILE = path.join(DB_DIR, 'users-db.json');
 
 // Ensure data directory exists
@@ -149,9 +149,11 @@ function saveDb() {
   try {
     const dataUsers = Array.from(users.entries());
     const dataTx = Array.from(transactions.entries());
+    const dataSessions = Array.from(sessions.entries());
     const dbPayload = {
       users: dataUsers,
-      transactions: dataTx
+      transactions: dataTx,
+      sessions: dataSessions,
     };
     fs.writeFileSync(DB_FILE, JSON.stringify(dbPayload, null, 2), 'utf-8');
   } catch (err) {
@@ -182,7 +184,13 @@ function loadDb() {
           transactions.set(key, val);
         }
       }
-      console.log(`Database loaded from ${dbPath}. Total users: ${users.size}, Total txs: ${transactions.size}`);
+      if (dbPayload.sessions) {
+        sessions.clear();
+        for (const [key, val] of dbPayload.sessions) {
+          sessions.set(key, val);
+        }
+      }
+      console.log(`Database loaded from ${dbPath}. Total users: ${users.size}, Total txs: ${transactions.size}, Sessions: ${sessions.size}`);
     } else {
       console.log('No existing database file found. Fresh instance created.');
     }
