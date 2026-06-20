@@ -80,7 +80,7 @@ export default function Header({ player, transactions, onActionComplete, onRefre
   return (
     <div className="w-full select-none" id="paciencia-header">
       {/* Real Top Header Bar - Tigrinho Enhanced */}
-      <header className="bg-gradient-to-r from-[#143d22] via-[#102d19] to-[#07190e] text-stone-100 py-2.5 px-4 shadow-lg relative"
+      <header className="bg-gradient-to-r from-[#143d22] via-[#102d19] to-[#07190e] text-stone-100 py-2 px-2 sm:py-2.5 sm:px-4 shadow-lg relative"
         style={{
           borderBottom: '2px solid',
           borderImage: 'linear-gradient(90deg, #FABF18, #d97706, #FABF18, #f59e0b, #FABF18) 1',
@@ -144,25 +144,25 @@ export default function Header({ player, transactions, onActionComplete, onRefre
               <span onClick={() => { if(onRefreshGame) onRefreshGame(); }} className="hidden sm:inline hover:text-[#FABF18] cursor-pointer transition-colors">Multiplayer</span>
               <button
                 onClick={() => { if(onOpenReferrals) onOpenReferrals(); }}
-                className="bg-gradient-to-r from-[#FABF18] to-[#d97706] hover:from-[#f59e0b] hover:to-[#b45309] text-[#142c23] px-2.5 py-1 rounded font-black text-[10px] sm:text-xs uppercase flex items-center gap-1 shadow-lg animate-bounce relative overflow-hidden btn-shimmer"
+                className="bg-gradient-to-r from-[#FABF18] to-[#d97706] hover:from-[#f59e0b] hover:to-[#b45309] text-[#142c23] px-1.5 sm:px-2.5 py-1 rounded font-black text-[8px] sm:text-xs uppercase flex items-center gap-1 shadow-lg animate-bounce relative overflow-hidden btn-shimmer"
               >
-                👑 INDIQUE E GANHE
+                👑 <span className="hidden sm:inline">INDIQUE E GANHE</span><span className="sm:hidden">GANHE</span>
               </button>
             </div>
 
             {/* Live Wallet Balance - Tigrinho Glow */}
-            <div className="flex items-center gap-2 bg-[#1b4335]/70 px-3 py-1.5 rounded border border-[#FABF18]/45 text-stone-100 shadow-lg pulse-ring">
+            <div className="flex items-center gap-1 sm:gap-2 bg-[#1b4335]/70 px-2 sm:px-3 py-1 sm:py-1.5 rounded border border-[#FABF18]/45 text-stone-100 shadow-lg pulse-ring">
               <div className="flex flex-col items-start leading-none">
                 {player.bonusBalance && player.bonusBalance > 0 ? (
                   <>
-                    <span className="text-[7.5px] uppercase font-bold tracking-wider text-emerald-400">Total Jogável</span>
-                    <span className="text-sm font-mono font-black text-[#FABF18] mt-0.5">{formattedTotal}</span>
-                    <span className="text-[7px] text-stone-400 font-medium">Real {formattedBalance} + Bônus {formattedBonus}</span>
+                    <span className="text-[7px] sm:text-[7.5px] uppercase font-bold tracking-wider text-emerald-400">Total Jogável</span>
+                    <span className="text-[11px] sm:text-sm font-mono font-black text-[#FABF18] mt-0.5">{formattedTotal}</span>
+                    <span className="text-[6px] sm:text-[7px] text-stone-400 font-medium">Real {formattedBalance} + Bônus {formattedBonus}</span>
                   </>
                 ) : (
                   <>
-                    <span className="text-[8px] uppercase font-bold tracking-wider text-emerald-400">Simulador Bet</span>
-                    <span className="text-sm font-mono font-black text-amber-300 mt-0.5">{formattedBalance}</span>
+                    <span className="text-[7px] sm:text-[8px] uppercase font-bold tracking-wider text-emerald-400">Simulador Bet</span>
+                    <span className="text-[11px] sm:text-sm font-mono font-black text-amber-300 mt-0.5">{formattedBalance}</span>
                   </>
                 )}
               </div>

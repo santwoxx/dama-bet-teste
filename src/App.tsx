@@ -1196,7 +1196,7 @@ export default function App() {
 
       {/* SECTION 1: THE SPOTLIGHT PREMIUM DAMA.BET TABLE */}
       <section 
-        className="relative py-10 px-4 sm:px-6 lg:px-8 shadow-inner flex-1 flex flex-col justify-center items-center min-h-[500px]"
+        className="relative py-6 sm:py-10 px-3 sm:px-6 lg:px-8 shadow-inner flex-1 flex flex-col justify-center items-center min-h-[400px] sm:min-h-[500px]"
         style={{
           backgroundImage: 'linear-gradient(to bottom, rgba(38, 5, 7, 0.45) 0%, rgba(10, 1, 2, 0.92) 100%), url("https://i.ibb.co/Qjxgcs76/Whats-App-Image-2026-06-16-at-00-39-02.jpg")',
           backgroundSize: 'cover',
@@ -1228,9 +1228,9 @@ export default function App() {
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-4xl flex items-center justify-center gap-4 sm:gap-8 mb-4 z-10"
+                className="w-full max-w-4xl flex items-center justify-center gap-2 sm:gap-8 mb-4 z-10"
               >
-                <div className="flex items-center gap-2 bg-[#132e1b]/80 border border-emerald-800/40 px-3 sm:px-4 py-2 rounded-lg shadow-lg">
+                <div className="flex items-center gap-1 sm:gap-2 bg-[#132e1b]/80 border border-emerald-800/40 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg shadow-lg">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
@@ -1239,52 +1239,52 @@ export default function App() {
                     key={onlinePlayers}
                     animate={{ scale: [1, 1.15, 1] }}
                     transition={{ duration: 0.35 }}
-                    className="font-mono font-black text-sm sm:text-base tabular-nums text-stone-100"
+                    className="font-mono font-black text-xs sm:text-base tabular-nums text-stone-100"
                   >
                     {onlinePlayers.toLocaleString()}
                   </motion.div>
-                  <span className="text-[10px] sm:text-xs font-bold text-emerald-300 uppercase tracking-wider font-sans">
-                    Jogadores Online
+                  <span className="text-[8px] sm:text-xs font-bold text-emerald-300 uppercase tracking-wider font-sans">
+                    <span className="hidden sm:inline">Jogadores Online</span><span className="sm:hidden">Online</span>
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 bg-[#2a1a0a]/80 border border-amber-800/40 px-3 sm:px-4 py-2 rounded-lg shadow-lg">
-                  <span className="text-lg sm:text-xl">⚔️</span>
+                <div className="flex items-center gap-1 sm:gap-2 bg-[#2a1a0a]/80 border border-amber-800/40 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg shadow-lg">
+                  <span className="text-sm sm:text-xl">⚔️</span>
                   <motion.div
                     key={activeMatches}
                     animate={{ scale: [1, 1.15, 1] }}
                     transition={{ duration: 0.35 }}
-                    className="font-mono font-black text-sm sm:text-base tabular-nums text-amber-300"
+                    className="font-mono font-black text-xs sm:text-base tabular-nums text-amber-300"
                   >
                     {activeMatches.toLocaleString()}
                   </motion.div>
-                  <span className="text-[10px] sm:text-xs font-bold text-amber-300 uppercase tracking-wider font-sans">
-                    Partidas em Andamento
+                  <span className="text-[8px] sm:text-xs font-bold text-amber-300 uppercase tracking-wider font-sans">
+                    <span className="hidden sm:inline">Partidas em Andamento</span><span className="sm:hidden">Partidas</span>
                   </span>
                 </div>
               </motion.div>
 
               {/* Tab Selector Section */}
-              <div className="flex gap-4 mb-6 z-10 relative">
+              <div className="flex gap-2 sm:gap-4 mb-6 z-10 relative">
                 <button
                   onClick={() => setLobbyTab('play')}
-                  className={`px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
+                  className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-black text-[10px] sm:text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
                     lobbyTab === 'play'
                       ? 'bg-[#FABF18] text-[#142c23] shadow-lg ring-1 ring-[#FABF18]'
                       : 'bg-[#1c1917]/90 text-stone-300 border border-stone-850 hover:bg-stone-800'
                   }`}
                 >
-                  🎮 Mesa de Jogo
+                  🎮 <span className="hidden sm:inline">Mesa de Jogo</span><span className="sm:hidden">Jogo</span>
                 </button>
                 <button
                   onClick={() => setLobbyTab('referral')}
-                  className={`px-5 py-2.5 rounded-lg font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
+                  className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-black text-[10px] sm:text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
                     lobbyTab === 'referral'
                       ? 'bg-[#FABF18] text-[#142c23] shadow-lg ring-1 ring-[#FABF18]'
                       : 'bg-[#1c1917]/90 text-stone-300 border border-stone-850 hover:bg-stone-800'
                   }`}
                 >
-                  🤝 Indique & Ganhe (Bônus)
+                  🤝 <span className="hidden sm:inline">Indique & Ganhe (Bônus)</span><span className="sm:hidden">Bônus</span>
                 </button>
               </div>
 
@@ -1346,7 +1346,7 @@ export default function App() {
                         }}
                         className="w-full md:w-auto bg-gradient-to-r from-[#FABF18] to-[#d97706] hover:from-[#f59e0b] hover:to-[#b45309] text-stone-950 font-black text-xs px-5 py-3 rounded-lg uppercase tracking-wider shadow-lg transition-all active:scale-95 duration-150 cursor-pointer btn-shimmer overflow-hidden"
                       >
-                        ⚡ RESGATAR MEU BÔNUS PIX
+                        ⚡ <span className="hidden sm:inline">RESGATAR MEU BÔNUS PIX</span><span className="sm:hidden">BÔNUS PIX</span>
                       </button>
                     </div>
                   </motion.div>
@@ -1397,7 +1397,7 @@ export default function App() {
                       <label className="block text-[11px] font-black uppercase text-[#6B5A4D] tracking-wider mb-1.5">
                         VALOR DA APOSTA
                       </label>
-                      <div className="flex gap-2">
+                      <div className="grid grid-cols-5 gap-1.5">
                         {[
                           { value: 5, color: 'from-amber-400 to-amber-600' },
                           { value: 10, color: 'from-amber-400 to-amber-600' },
@@ -1408,7 +1408,7 @@ export default function App() {
                           <button
                             key={value}
                             onClick={() => setBetAmount(value)}
-                            className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl transition-all duration-200 cursor-pointer ${
+                            className={`flex flex-col items-center gap-0.5 py-2 px-0.5 rounded-xl transition-all duration-200 cursor-pointer ${
                               betAmount === value
                                 ? `bg-gradient-to-b ${color} text-stone-950 shadow-[0_0_14px_rgba(250,191,24,0.5)] scale-105 ring-2 ring-[#FABF18]`
                                 : 'bg-[#EFEAD8] text-[#5C4033] border border-[#DDD6BF] hover:border-[#FABF18] hover:shadow-sm'
@@ -1758,7 +1758,7 @@ export default function App() {
               <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
                 
                 {/* Arena Left panel - Checkers widget board container */}
-                <div className="lg:col-span-8 bg-[#151515]/85 border border-stone-800 rounded-lg p-3 sm:p-6 lg:p-8 shadow-2xl flex flex-col items-center justify-center min-h-[480px] md:min-h-[580px] w-full">
+                <div className="lg:col-span-8 bg-[#151515]/85 border border-stone-800 rounded-lg p-2 sm:p-6 lg:p-8 shadow-2xl flex flex-col items-center justify-center min-h-[350px] sm:min-h-[480px] md:min-h-[580px] w-full overflow-x-hidden">
                   
                   {/* Pre-Match Stakes confirmations screens */}
                   {(activeGame.status === 'waiting_for_challenger' || activeGame.status === 'bet_confirmation') ? (
