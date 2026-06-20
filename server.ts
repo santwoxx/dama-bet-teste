@@ -2104,7 +2104,19 @@ app.get('/api/ranking/last-winners', (req, res) => {
   res.json({ winners: lastWinners.slice(0, 20) });
 });
 
-// Server boot and hot Vite bundling
+// Production static file serving + SPA fallback (used both locally and on Vercel)
+if (process.env.NODE_ENV === 'production' || process.env.VERCEL) {
+  const distPath = path.join(process.cwd(), 'dist');
+  app.use(express.static(distPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/')) return next();
+    res.sendFile(path.join(distPath, 'index.html'), (err) => {
+      if (err) next();
+    });
+  });
+}
+
+// Server boot (dev mode — Vite middleware + listening)
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
@@ -2118,12 +2130,6 @@ async function startServer() {
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
   }
 
   app.listen(PORT, '0.0.0.0', () => {
