@@ -274,6 +274,23 @@ export default function ReferralsDashboard({
   return (
     <div id="referrals-dashboard" className="w-full max-w-4xl mx-auto space-y-6 relative z-10 animate-fade-in font-sans">
       
+      {/* Promotional Image Banner */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4 }}
+        className="w-full rounded-2xl overflow-hidden border-2 border-[#FABF18]/60 shadow-2xl relative bg-stone-950 flex items-center justify-center"
+      >
+        <img 
+          src="https://i.ibb.co/jkNfg2x6/Whats-App-Image-2026-06-21-at-19-19-28.jpg" 
+          alt="Promoção Indique e Ganhe" 
+          className="w-full h-auto object-contain max-h-[320px] sm:max-h-[400px]"
+        />
+        <div className="absolute top-4 left-4 bg-gradient-to-r from-[#FABF18] to-amber-600 text-stone-950 text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-wider shadow-lg">
+          PROMOÇÃO DISPONÍVEL 🎁
+        </div>
+      </motion.div>
+
       {/* 1. ULTRA PREMIUM AFFILIATE BANNER - Tigrinho Enhanced */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

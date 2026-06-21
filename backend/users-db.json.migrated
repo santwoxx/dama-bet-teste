@@ -1,0 +1,129 @@
+{
+  "users": [
+    [
+      "sec_eothu24",
+      {
+        "id": "sec_eothu24",
+        "name": "ReiDoTabu#8554",
+        "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=sec_eothu24",
+        "balance": 100,
+        "botGamesPlayed": 0,
+        "bonusBalance": 0,
+        "rolloverRequired": 0,
+        "rolloverWagered": 0
+      }
+    ],
+    [
+      "sec_aq5bs85",
+      {
+        "id": "sec_aq5bs85",
+        "name": "Mestre das Pedras#7833",
+        "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=sec_aq5bs85",
+        "balance": 100,
+        "botGamesPlayed": 0,
+        "bonusBalance": 0,
+        "rolloverRequired": 0,
+        "rolloverWagered": 0
+      }
+    ],
+    [
+      "user_4c6a03349dc99a4b",
+      {
+        "id": "user_4c6a03349dc99a4b",
+        "name": "julian",
+        "email": "xeravc@gmail.com",
+        "passwordHash": "e092fb8a7fe54bc6126b7588f4d1c1e6af6c1b8c3a1efaa7b5ffed1037893ae5d4391489eb64426c1201c1fe3fbc3e9f5edf21a0b66d70cd00e778ffa1a37245",
+        "passwordSalt": "34fe72638bc0ca20b691f98cf344db01",
+        "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=user_4c6a03349dc99a4b",
+        "balance": 100
+      }
+    ],
+    [
+      "sec_tsa1yoa",
+      {
+        "id": "sec_tsa1yoa",
+        "name": "ReiDoTabu#1714",
+        "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=sec_tsa1yoa",
+        "balance": 100,
+        "botGamesPlayed": 0,
+        "bonusBalance": 0,
+        "rolloverRequired": 0,
+        "rolloverWagered": 0
+      }
+    ],
+    [
+      "user_3933ae3d54f89c38",
+      {
+        "id": "user_3933ae3d54f89c38",
+        "name": "julian123",
+        "email": "brisasofc@gmail.com",
+        "passwordHash": "9bfd06344eee0b53777c5c0594376903dd4b0b2c19f43ccfef43c9103a845f39d71a49d205dbf734b74d70dfa5231c81fb828fc4dd61e8b37ce75537ec160d55",
+        "passwordSalt": "85bd578f6c91281ecf60fd0c3c31e77e",
+        "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=user_3933ae3d54f89c38",
+        "balance": 100
+      }
+    ]
+  ],
+  "transactions": [
+    [
+      "sec_eothu24",
+      [
+        {
+          "id": "tx-welcome-b2r8oq5",
+          "type": "deposit",
+          "amount": 100,
+          "timestamp": "2026-06-18T03:58:41.277Z",
+          "description": "Saldo de boas-vindas simulado (100% seguro)"
+        }
+      ]
+    ],
+    [
+      "sec_aq5bs85",
+      [
+        {
+          "id": "tx-welcome-vqwnmfv",
+          "type": "deposit",
+          "amount": 100,
+          "timestamp": "2026-06-18T04:00:22.534Z",
+          "description": "Saldo de boas-vindas simulado (100% seguro)"
+        }
+      ]
+    ],
+    [
+      "user_4c6a03349dc99a4b",
+      [
+        {
+          "id": "tx-welcome-f116d2bf",
+          "type": "deposit",
+          "amount": 100,
+          "timestamp": "2026-06-18T04:23:31.299Z",
+          "description": "Saldo de boas-vindas para treinar no DamaBet"
+        }
+      ]
+    ],
+    [
+      "sec_tsa1yoa",
+      [
+        {
+          "id": "tx-welcome-ob47m20",
+          "type": "deposit",
+          "amount": 100,
+          "timestamp": "2026-06-20T03:15:13.164Z",
+          "description": "Saldo de boas-vindas simulado (100% seguro)"
+        }
+      ]
+    ],
+    [
+      "user_3933ae3d54f89c38",
+      [
+        {
+          "id": "tx-welcome-69de9f8d",
+          "type": "deposit",
+          "amount": 100,
+          "timestamp": "2026-06-20T03:23:04.224Z",
+          "description": "Saldo de boas-vindas para treinar no DamaBet"
+        }
+      ]
+    ]
+  ]
+}

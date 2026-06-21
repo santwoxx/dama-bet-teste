@@ -10,9 +10,10 @@ interface HeaderProps {
   onRefreshGame?: () => void;
   onOpenReferrals?: () => void;
   onLogout?: () => void;
+  onOpenDeposit?: () => void;
 }
 
-export default function Header({ player, transactions, onActionComplete, onRefreshGame, onOpenReferrals, onLogout }: HeaderProps) {
+export default function Header({ player, transactions, onActionComplete, onRefreshGame, onOpenReferrals, onLogout, onOpenDeposit }: HeaderProps) {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [modalType, setModalType] = useState<'deposit' | 'withdraw'>('deposit');
@@ -20,6 +21,7 @@ export default function Header({ player, transactions, onActionComplete, onRefre
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [pixKey] = useState(`pix-${player.id}@damabet.com`);
+  const [withdrawalPixKey, setWithdrawalPixKey] = useState('');
 
   const handleWalletAction = async () => {
     setError('');
@@ -37,15 +39,28 @@ export default function Header({ player, transactions, onActionComplete, onRefre
     setLoading(true);
     try {
       const endpoint = modalType === 'deposit' ? '/api/users/deposit' : '/api/users/withdraw';
+      const token = localStorage.getItem('damabet_token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const bodyData: any = {
+        amount: parsedAmount,
+      };
+
+      if (modalType === 'withdraw') {
+        bodyData.pixKey = withdrawalPixKey.trim() || player.email || pixKey;
+      } else {
+        bodyData.id = player.id;
+      }
+
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: player.id,
-          amount: parsedAmount,
-        }),
+        headers,
+        body: JSON.stringify(bodyData),
       });
 
       if (!response.ok) {
@@ -54,6 +69,7 @@ export default function Header({ player, transactions, onActionComplete, onRefre
       }
 
       setShowWalletModal(false);
+      setWithdrawalPixKey('');
       onActionComplete();
     } catch (err: any) {
       setError(err.message || 'Houve um erro.');
@@ -140,7 +156,6 @@ export default function Header({ player, transactions, onActionComplete, onRefre
           <div className="flex items-center gap-4 text-xs">
             {/* Nav links matching image */}
             <div className="flex items-center gap-3 text-stone-200 font-semibold font-sans">
-              <span onClick={() => { if(onRefreshGame) onRefreshGame(); }} className="hidden sm:inline hover:text-[#FABF18] cursor-pointer transition-colors">Damas IA</span>
               <span onClick={() => { if(onRefreshGame) onRefreshGame(); }} className="hidden sm:inline hover:text-[#FABF18] cursor-pointer transition-colors">Multiplayer</span>
               <button
                 onClick={() => { if(onOpenReferrals) onOpenReferrals(); }}
@@ -170,10 +185,14 @@ export default function Header({ player, transactions, onActionComplete, onRefre
                 <button
                   id="header-deposit"
                   onClick={() => {
-                    setModalType('deposit');
-                    setShowWalletModal(true);
+                    if (onOpenDeposit) {
+                      onOpenDeposit();
+                    } else {
+                      setModalType('deposit');
+                      setShowWalletModal(true);
+                    }
                   }}
-                  title="Depositar fundos virtuais"
+                  title="Depositar fundos via PIX"
                   className="bg-gradient-to-br from-[#FABF18] to-[#d97706] hover:from-[#f59e0b] hover:to-[#b45309] text-stone-900 p-1 rounded font-black transition-all shadow-[0_0_8px_rgba(250,191,24,0.3)] hover:shadow-[0_0_12px_rgba(250,191,24,0.5)]"
                 >
                   <Plus className="w-3 h-3 text-[#142c23] stroke-[3px]" />
@@ -236,9 +255,9 @@ export default function Header({ player, transactions, onActionComplete, onRefre
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="text-base font-bold text-amber-400">
-                  {modalType === 'deposit' ? 'Adicionar Saldo PIX (Simulado)' : 'Solicitar Retirada PIX (Simulada)'}
+                  {modalType === 'deposit' ? 'Adicionar Saldo PIX' : 'Solicitar Retirada PIX'}
                 </h3>
-                <p className="text-[10px] uppercase tracking-wider text-stone-400">Transação educativa de teste da Copa do Mundo</p>
+                <p className="text-[10px] uppercase tracking-wider text-stone-400">Processamento financeiro seguro</p>
               </div>
               <button
                 className="text-stone-400 hover:text-stone-200 transition-colors bg-stone-800 w-6 h-6 rounded flex items-center justify-center text-xs"
@@ -312,7 +331,9 @@ export default function Header({ player, transactions, onActionComplete, onRefre
               ) : null}
 
               <div>
-                <label className="block text-[10px] uppercase tracking-widest text-[#999] mb-1.5">Sugestões de Depósito (R$)</label>
+                <label className="block text-[10px] uppercase tracking-widest text-[#999] mb-1.5">
+                  {modalType === 'deposit' ? 'Sugestões de Depósito (R$)' : 'Sugestões de Saque (R$)'}
+                </label>
                 <div className="grid grid-cols-4 gap-2">
                   {['20', '50', '100', '200'].map((val) => (
                     <button
@@ -341,17 +362,32 @@ export default function Header({ player, transactions, onActionComplete, onRefre
                 />
               </div>
 
+              {modalType === 'withdraw' && (
+                <div>
+                  <label className="block text-[10px] uppercase tracking-widest text-amber-400 mb-1.5 font-bold">
+                    Chave PIX de Destino
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: CPF, Telefone, E-mail ou Chave Aleatória..."
+                    value={withdrawalPixKey}
+                    onChange={(e) => setWithdrawalPixKey(e.target.value)}
+                    className="w-full bg-stone-900 border border-stone-750 rounded px-3 py-2 text-sm text-[#FABF18] focus:outline-none focus:border-[#FABF18]"
+                  />
+                </div>
+              )}
+
               <div className="bg-stone-950/80 p-3 rounded border border-stone-850 space-y-2 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-stone-500">Chave PIX da Rede:</span>
-                  <span className="font-mono text-stone-300 truncate max-w-[180px]" title={pixKey}>
-                    {pixKey}
+                  <span className="text-stone-500">Chave PIX {modalType === 'withdraw' ? 'de Destino' : '(E-mail)'}:</span>
+                  <span className="font-mono text-stone-300 truncate max-w-[180px]" title={modalType === 'withdraw' ? (withdrawalPixKey || player.email || pixKey) : (player.email || pixKey)}>
+                    {modalType === 'withdraw' ? (withdrawalPixKey || player.email || pixKey) : (player.email || pixKey)}
                   </span>
                 </div>
                 {modalType === 'deposit' ? (
-                  <p className="text-[10.5px] text-stone-400">O valor simulado e o bônus Copa 2026 correspondente serão creditados instantaneamente de modo seguro.</p>
+                  <p className="text-[10.5px] text-stone-400">O depósito via PIX do Mercado Pago será creditado na sua conta automaticamente.</p>
                 ) : (
-                  <p className="text-[10.5px] text-stone-400 text-amber-300 font-medium">Qualquer saque instantâneo simulado debitará da sua custódia.</p>
+                  <p className="text-[10.5px] text-[#FABF18] font-medium">A solicitação de saque será enviada. O administrador processará a transferência manual via PIX em breve.</p>
                 )}
               </div>
 
@@ -361,7 +397,7 @@ export default function Header({ player, transactions, onActionComplete, onRefre
                 className="w-full bg-gradient-to-r from-[#FABF18] via-[#d97706] to-[#FABF18] hover:from-[#f59e0b] hover:to-[#b45309] text-stone-950 font-black text-xs py-3 rounded uppercase tracking-wider transition-all duration-150 cursor-pointer btn-shimmer overflow-hidden shadow-lg hover:shadow-[0_0_20px_rgba(250,191,24,0.4)]"
                 style={{ backgroundSize: '200% 100%' }}
               >
-                {loading ? 'Processando transação...' : modalType === 'deposit' ? '✦ EFETUAR DEPÓSITO DE TESTE ✦' : '✦ CONFIRMAR RETIRADA ✦'}
+                {loading ? 'Processando transação...' : modalType === 'deposit' ? '✦ EFETUAR DEPÓSITO PIX ✦' : '✦ SOLICITAR RETIRADA PIX ✦'}
               </button>
             </div>
           </motion.div>

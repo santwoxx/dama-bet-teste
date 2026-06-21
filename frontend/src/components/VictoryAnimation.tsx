@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Crown, Share2, Wallet, Check, Flame, Trophy, Zap, Repeat, Home } from 'lucide-react';
+import { Crown, Share2, Wallet, Check, Flame, Trophy, Zap, Repeat, Home, Frown } from 'lucide-react';
 
 interface BurstParticle {
   id: number;
@@ -60,8 +60,8 @@ export default function VictoryAnimation({
       saveStreak(newCount, s.totalEarned + prize);
       return { count: newCount, totalEarned: s.totalEarned + prize };
     }
-    saveStreak(0, s.totalEarned);
-    return { count: 0, totalEarned: s.totalEarned };
+    saveStreak(0, 0);
+    return { count: 0, totalEarned: 0 };
   }, [isDraw, isPlayerWinner, prize]);
 
   const streakBonus = Math.floor(prize * Math.min(streak.count * 0.05, 0.5));
@@ -129,7 +129,13 @@ export default function VictoryAnimation({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden select-none"
-      style={{ background: 'radial-gradient(ellipse at center, #0f1a2e 0%, #05080e 100%)' }}
+      style={{
+        background: isPlayerWinner
+          ? 'radial-gradient(ellipse at center, #0f1a2e 0%, #05080e 100%)'
+          : isDraw
+          ? 'radial-gradient(ellipse at center, #0e1e2e 0%, #05080e 100%)'
+          : 'radial-gradient(ellipse at center, #2e1012 0%, #080505 100%)'
+      }}
     >
       {/* Background click catcher */}
       <div className="absolute inset-0 z-10" onClick={handleBgClick} />
@@ -143,7 +149,7 @@ export default function VictoryAnimation({
 
       {/* Particle rain */}
       <div className="absolute inset-0 pointer-events-none z-[1] overflow-hidden">
-        {rainParticles.map((p) => (
+        {(isPlayerWinner || isDraw) && rainParticles.map((p) => (
           <motion.div
             key={p.id}
             className="absolute"
@@ -159,14 +165,26 @@ export default function VictoryAnimation({
             transition={{ duration: p.duration, delay: p.delay, repeat: Infinity, ease: 'easeInOut' }}
           >
             {p.type === 'coin' ? (
-              <div
-                className="rounded-full bg-gradient-to-b from-amber-400 via-[#FABF18] to-amber-600 border border-amber-200/30 flex items-center justify-center font-mono font-black text-amber-900 shadow-lg"
-                style={{ width: p.size, height: p.size, fontSize: p.size * 0.4 }}
-              >
-                $
-              </div>
+              isPlayerWinner ? (
+                <div
+                  className="rounded-full bg-gradient-to-b from-amber-400 via-[#FABF18] to-amber-600 border border-amber-200/30 flex items-center justify-center font-mono font-black text-amber-900 shadow-lg"
+                  style={{ width: p.size, height: p.size, fontSize: p.size * 0.4 }}
+                >
+                  $
+                </div>
+              ) : (
+                <div
+                  className="rounded-full bg-gradient-to-b from-cyan-400 via-cyan-350 to-cyan-600 border border-cyan-200/30 flex items-center justify-center font-mono font-black text-cyan-900 shadow-lg"
+                  style={{ width: p.size, height: p.size, fontSize: p.size * 0.4 }}
+                >
+                  $
+                </div>
+              )
             ) : (
-              <span className="text-[#FABF18] drop-shadow-[0_0_6px_rgba(250,191,24,0.6)]" style={{ fontSize: p.size }}>
+              <span
+                className={isPlayerWinner ? "text-[#FABF18] drop-shadow-[0_0_6px_rgba(250,191,24,0.6)]" : "text-cyan-400 drop-shadow-[0_0_6px_rgba(34,211,238,0.6)]"}
+                style={{ fontSize: p.size }}
+              >
                 ✦
               </span>
             )}
@@ -177,7 +195,7 @@ export default function VictoryAnimation({
       {/* Burst particles */}
       <div className="absolute inset-0 pointer-events-none z-20">
         <AnimatePresence>
-          {bursts.map((b) => (
+          {(isPlayerWinner || isDraw) && bursts.map((b) => (
             <motion.div
               key={b.id}
               initial={{ x: b.x, y: b.y, scale: 0, opacity: 1 }}
@@ -204,8 +222,8 @@ export default function VictoryAnimation({
           <motion.div
             key="flash"
             className="absolute inset-0 z-5 pointer-events-none"
-            initial={{ background: 'rgba(250,191,24,0.4)' }}
-            animate={{ background: 'rgba(250,191,24,0)' }}
+            initial={{ background: isPlayerWinner ? 'rgba(250,191,24,0.4)' : (isDraw ? 'rgba(34,211,238,0.3)' : 'rgba(239,68,68,0.35)') }}
+            animate={{ background: isPlayerWinner ? 'rgba(250,191,24,0)' : (isDraw ? 'rgba(34,211,238,0)' : 'rgba(239,68,68,0)') }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.6 }}
           />
@@ -221,8 +239,12 @@ export default function VictoryAnimation({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Glow halos */}
-        <div className="absolute -top-20 w-72 h-72 bg-[#FABF18] rounded-full blur-[80px] opacity-[0.08] pointer-events-none" />
-        <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-cyan-500 rounded-full blur-[60px] opacity-[0.06] pointer-events-none" />
+        <div className={`absolute -top-20 w-72 h-72 rounded-full blur-[80px] opacity-[0.08] pointer-events-none ${
+          isPlayerWinner ? 'bg-[#FABF18]' : (isDraw ? 'bg-cyan-500' : 'bg-red-500')
+        }`} />
+        <div className={`absolute -bottom-10 -right-10 w-40 h-40 rounded-full blur-[60px] opacity-[0.06] pointer-events-none ${
+          isPlayerWinner ? 'bg-cyan-500' : (isDraw ? 'bg-cyan-500' : 'bg-red-900')
+        }`} />
 
         {/* Streak badge */}
         {streak.count > 1 && !isDraw && (
@@ -238,21 +260,40 @@ export default function VictoryAnimation({
           </motion.div>
         )}
 
-        {/* Crown */}
+        {/* Header Icon */}
         <motion.div
           animate={{ y: [0, -5, 0], rotate: [0, 3, -3, 0] }}
           transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+          className="mb-2"
         >
-          <Crown className="w-12 h-12 text-[#FABF18] drop-shadow-[0_0_15px_rgba(250,191,24,0.6)] fill-[#FABF18]" />
+          {isPlayerWinner ? (
+            <Crown className="w-12 h-12 text-[#FABF18] drop-shadow-[0_0_15px_rgba(250,191,24,0.6)] fill-[#FABF18]" />
+          ) : isDraw ? (
+            <Trophy className="w-12 h-12 text-cyan-400 drop-shadow-[0_0_15px_rgba(34,211,238,0.6)] fill-cyan-400/20" />
+          ) : (
+            <Frown className="w-12 h-12 text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.6)]" />
+          )}
         </motion.div>
 
         {/* Title */}
         <motion.h1
-          animate={{ textShadow: ['0 0 20px rgba(250,191,24,0.3)', '0 0 50px rgba(250,191,24,0.6)', '0 0 20px rgba(250,191,24,0.3)'] }}
+          animate={{
+            textShadow: isPlayerWinner
+              ? ['0 0 20px rgba(250,191,24,0.3)', '0 0 50px rgba(250,191,24,0.6)', '0 0 20px rgba(250,191,24,0.3)']
+              : isDraw
+              ? ['0 0 20px rgba(34,211,238,0.3)', '0 0 50px rgba(34,211,238,0.6)', '0 0 20px rgba(34,211,238,0.3)']
+              : ['0 0 20px rgba(239,68,68,0.3)', '0 0 50px rgba(239,68,68,0.6)', '0 0 20px rgba(239,68,68,0.3)']
+          }}
           transition={{ duration: 2, repeat: Infinity }}
-          className="text-5xl sm:text-6xl font-black tracking-tight leading-none uppercase bg-gradient-to-b from-[#FFE386] via-[#FABF18] to-[#AE730B] bg-clip-text text-transparent drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]"
+          className={`text-5xl sm:text-6xl font-black tracking-tight leading-none uppercase bg-clip-text text-transparent drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] ${
+            isPlayerWinner
+              ? 'bg-gradient-to-b from-[#FFE386] via-[#FABF18] to-[#AE730B]'
+              : isDraw
+              ? 'bg-gradient-to-b from-cyan-300 via-cyan-400 to-cyan-600'
+              : 'bg-gradient-to-b from-red-400 via-red-550 to-red-700'
+          }`}
         >
-          {isDraw ? 'EMPATE' : isPlayerWinner ? 'VITÓRIA' : 'FIM DE JOGO'}
+          {isDraw ? 'EMPATE' : isPlayerWinner ? 'VITÓRIA' : 'DERROTA'}
         </motion.h1>
 
         <p className="text-stone-400 text-xs font-bold tracking-wider mt-1 mb-4">
@@ -261,26 +302,49 @@ export default function VictoryAnimation({
 
         {/* Prize card */}
         <motion.div
-          animate={stage === 'done' ? { boxShadow: ['0 0 30px rgba(34,211,238,0.2)', '0 0 60px rgba(34,211,238,0.35)', '0 0 30px rgba(34,211,238,0.2)'] } : {}}
+          animate={stage === 'done' ? {
+            boxShadow: isDraw || isPlayerWinner
+              ? ['0 0 30px rgba(34,211,238,0.2)', '0 0 60px rgba(34,211,238,0.35)', '0 0 30px rgba(34,211,238,0.2)']
+              : ['0 0 30px rgba(239,68,68,0.15)', '0 0 50px rgba(239,68,68,0.25)', '0 0 30px rgba(239,68,68,0.15)']
+          } : {}}
           transition={{ duration: 3, repeat: Infinity }}
-          className="w-full bg-[#0a111f]/90 backdrop-blur-xl border border-cyan-400/40 rounded-3xl p-6 relative overflow-hidden"
+          className={`w-full bg-[#0a111f]/90 backdrop-blur-xl rounded-3xl p-6 relative overflow-hidden border ${
+            isDraw || isPlayerWinner ? 'border-cyan-400/40' : 'border-red-500/25'
+          }`}
         >
+          {/* Top colored bar with glow */}
+          <div className={`absolute top-0 inset-x-0 h-1 rounded-t-3xl ${
+            isPlayerWinner ? 'bg-gradient-to-r from-[#FABF18] via-[#f59e0b] to-[#FABF18]' : (isDraw ? 'bg-cyan-500' : 'bg-red-550/40')
+          }`} />
+
           {/* Glare sweep */}
           <motion.div
-            className="absolute -top-12 w-full h-12 bg-gradient-to-r from-transparent via-[#FABF18]/20 to-transparent blur-2xl"
+            className={`absolute -top-12 w-full h-12 bg-gradient-to-r from-transparent to-transparent blur-2xl ${
+              isPlayerWinner ? 'via-[#FABF18]/20' : (isDraw ? 'via-cyan-400/20' : 'via-red-500/10')
+            }`}
             animate={{ x: ['-100%', '100%'] }}
             transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
           />
 
-          <span className="text-[10px] text-stone-500 font-black tracking-[0.2em] uppercase block">PRÊMIO</span>
+          <span className="text-[10px] text-stone-500 font-black tracking-[0.2em] uppercase block">
+            {isDraw ? 'REEMBOLSO' : isPlayerWinner ? 'PRÊMIO' : 'JOGADA FINAL'}
+          </span>
 
           <motion.div className="relative my-3">
             <motion.span
               key={displayAmount}
               initial={{ scale: 1.2, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="text-5xl sm:text-6xl font-mono font-black tracking-tight text-[#FABF18] block"
-              style={{ textShadow: '0 0 30px rgba(250,191,24,0.4)' }}
+              className={`text-5xl sm:text-6xl font-mono font-black tracking-tight block ${
+                isPlayerWinner ? 'text-[#FABF18]' : (isDraw ? 'text-cyan-400' : 'text-stone-500')
+              }`}
+              style={{
+                textShadow: isPlayerWinner
+                  ? '0 0 30px rgba(250,191,24,0.4)'
+                  : isDraw
+                  ? '0 0 30px rgba(34,211,238,0.4)'
+                  : '0 0 20px rgba(239,68,68,0.15)'
+              }}
             >
               R$ {displayAmount.toFixed(2)}
             </motion.span>
@@ -300,29 +364,53 @@ export default function VictoryAnimation({
 
           {/* Wallet animation */}
           <div className="relative flex items-center justify-center w-32 h-24 mx-auto my-2">
-            <div className="absolute w-16 h-16 bg-[#FABF18]/20 rounded-full blur-2xl animate-pulse" />
+            <div className={`absolute w-16 h-16 rounded-full blur-2xl animate-pulse ${
+              isPlayerWinner ? 'bg-[#FABF18]/20' : (isDraw ? 'bg-cyan-500/10' : 'bg-red-900/10')
+            }`} />
             <motion.div
               animate={{ y: [3, -3, 3] }}
               transition={{ duration: 2, repeat: Infinity }}
-              className="absolute -top-1 z-10 w-10 h-10 rounded-full bg-gradient-to-b from-cyan-400 to-cyan-600 border-2 border-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.6)] flex items-center justify-center font-mono font-black text-xs text-white"
+              className={`absolute -top-1 z-10 w-10 h-10 rounded-full border-2 flex items-center justify-center font-mono font-black text-xs text-white ${
+                isDraw || isPlayerWinner
+                  ? 'bg-gradient-to-b from-cyan-400 to-cyan-600 border-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.6)]'
+                  : 'bg-gradient-to-b from-red-500 to-red-700 border-red-400 shadow-[0_0_12px_rgba(239,68,68,0.4)]'
+              }`}
             >
               R$
             </motion.div>
-            <div className="w-24 h-16 bg-gradient-to-b from-[#14233c] to-[#080d16] border border-[#1e3d6b] rounded-xl relative flex flex-col justify-between p-2 z-20">
-              <div className="absolute inset-1 rounded-xl border border-dashed border-cyan-400/30 pointer-events-none" />
-              <div className="absolute bottom-1 right-1 inset-x-1 h-[1.5px] bg-cyan-400/60 shadow-[0_0_6px_#00FFFF]" />
-              <div className="w-10 h-1.5 rounded bg-cyan-900/40 border border-cyan-500/20" />
-              <div className="text-[6px] text-stone-500 font-mono">wallet</div>
+            <div className={`w-24 h-16 bg-gradient-to-b from-[#14233c] to-[#080d16] border rounded-xl relative flex flex-col justify-between p-2 z-20 ${
+              isDraw || isPlayerWinner ? 'border-[#1e3d6b]' : 'border-red-950/40'
+            }`}>
+              <div className={`absolute inset-1 rounded-xl border border-dashed pointer-events-none ${
+                isDraw || isPlayerWinner ? 'border-cyan-400/30' : 'border-red-500/20'
+              }`} />
+              <div className={`absolute bottom-1 right-1 inset-x-1 h-[1.5px] ${
+                isDraw || isPlayerWinner ? 'bg-cyan-400/60 shadow-[0_0_6px_#00FFFF]' : 'bg-red-500/40 shadow-[0_0_6px_rgba(239,68,68,0.5)]'
+              }`} />
+              <div className={`w-10 h-1.5 rounded bg-cyan-900/40 border ${
+                isDraw || isPlayerWinner ? 'border-cyan-500/20' : 'border-red-500/10'
+              }`} />
+              <div className="text-[6px] text-stone-550 font-mono">wallet</div>
             </div>
           </div>
 
-          {/* Success check */}
-          <div className="flex items-center justify-center gap-2 bg-[#022030]/60 py-2 px-3 rounded-full border border-cyan-500/20 mt-1">
-            <div className="w-5 h-5 rounded-full bg-cyan-500 flex items-center justify-center shrink-0">
-              <Check className="w-3 h-3 text-black stroke-[4px]" />
+          {/* Success check / defeat cross */}
+          <div className={`flex items-center justify-center gap-2 py-2 px-3 rounded-full border mt-1 ${
+            isDraw ? 'bg-[#022030]/60 border-cyan-500/20 text-cyan-300' :
+            isPlayerWinner ? 'bg-[#022030]/60 border-cyan-500/20 text-cyan-300' :
+            'bg-red-950/40 border-red-500/25 text-red-400'
+          }`}>
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
+              isDraw || isPlayerWinner ? 'bg-cyan-500' : 'bg-red-500'
+            }`}>
+              {isDraw || isPlayerWinner ? (
+                <Check className="w-3 h-3 text-black stroke-[4px]" />
+              ) : (
+                <span className="text-black font-black text-[10px] font-sans">✕</span>
+              )}
             </div>
-            <span className="text-[9px] text-cyan-300 font-extrabold tracking-wide uppercase">
-              {isDraw ? 'Aposta reembolsada' : 'Creditado na carteira'}
+            <span className="text-[9px] font-extrabold tracking-wide uppercase">
+              {isDraw ? 'Aposta reembolsada' : isPlayerWinner ? 'Creditado na carteira' : 'Saldo debitado da carteira'}
             </span>
           </div>
         </motion.div>
@@ -344,7 +432,7 @@ export default function VictoryAnimation({
                 </span>
               </div>
             </div>
-            {streak.totalEarned > 0 && (
+            {streak.totalEarned > 0 && isPlayerWinner && (
               <div className="text-right">
                 <span className="text-[7px] text-stone-500 font-black uppercase block">TOTAL GANHO</span>
                 <span className="text-xs font-mono font-black text-emerald-400">
@@ -356,7 +444,7 @@ export default function VictoryAnimation({
         )}
 
         {/* Click counter */}
-        {clicks > 0 && (
+        {clicks > 0 && isPlayerWinner && (
           <motion.div
             initial={{ opacity: 0, scale: 0 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -376,7 +464,11 @@ export default function VictoryAnimation({
           >
             <button
               onClick={onClose}
-              className="w-full bg-gradient-to-b from-[#FCD34D] via-[#FABF18] to-[#C2410C] hover:from-[#FDE047] hover:to-[#EA580C] text-[#142c23] font-black py-4 rounded-2xl text-xs uppercase tracking-widest shadow-[0_8px_30px_rgba(245,158,11,0.3)] cursor-pointer hover:scale-[1.02] active:scale-[0.97] transition-all duration-150 relative overflow-hidden group"
+              className={`w-full font-black py-4 rounded-2xl text-xs uppercase tracking-widest cursor-pointer hover:scale-[1.02] active:scale-[0.97] transition-all duration-150 relative overflow-hidden group ${
+                isPlayerWinner || isDraw
+                  ? 'bg-gradient-to-b from-[#FCD34D] via-[#FABF18] to-[#C2410C] hover:from-[#FDE047] hover:to-[#EA580C] text-[#142c23] shadow-[0_8px_30px_rgba(245,158,11,0.3)]'
+                  : 'bg-gradient-to-b from-red-500 via-red-600 to-red-800 hover:from-red-400 hover:to-red-700 text-white shadow-[0_8px_30px_rgba(220,38,38,0.25)] border border-red-550/20'
+              }`}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent opacity-50" />
               <span className="relative flex items-center justify-center gap-2">

@@ -9,3 +9,5 @@ coverage/
 .data/
 users-db.json
 server.mjs
+
+.vercel

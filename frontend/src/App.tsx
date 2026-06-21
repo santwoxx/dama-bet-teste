@@ -7,6 +7,7 @@ import ReferralsDashboard from './components/ReferralsDashboard';
 import VictoryAnimation from './components/VictoryAnimation';
 import { playReactionSound, playWinSound, playMoveSound, playCaptureSound } from './utils/audio';
 import { motion, AnimatePresence } from 'motion/react';
+import DepositPage from './components/DepositPage';
 
 // ─── Sparkle Background Overlay (Tigrinho Style) ─────────────────────
 const SparkleBg = React.memo(function SparkleBg({ density = 15, className = '' }: { density?: number; className?: string }) {
@@ -97,6 +98,7 @@ export default function App() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [player, setPlayer] = useState<Player | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [authToken, setAuthToken] = useState<string>('');
 
   // Authentication states (No-Firebase system)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -129,7 +131,7 @@ export default function App() {
   const [boardConfig, setBoardConfig] = useState<'8X8-8' | '8X8-12' | '10X10-20'>('8X8-12');
   
   // Tab views and affiliate simulation states
-  const [lobbyTab, setLobbyTab] = useState<'play' | 'referral'>('play');
+  const [lobbyTab, setLobbyTab] = useState<'play' | 'referral' | 'deposit'>('play');
   const [invitedCount, setInvitedCount] = useState<number>(() => {
     const saved = localStorage.getItem('damabet_invited_count');
     return saved ? parseInt(saved, 10) : 0;
@@ -179,8 +181,10 @@ export default function App() {
     return () => clearInterval(timerId);
   }, [activeGame?.id, activeGame?.status, activeGame?.startedAt]);
 
-  // Social proof polling
+  // Social proof polling (Only active in lobby view to save CPU and network)
   useEffect(() => {
+    if (currentView !== 'lobby') return;
+
     const fakeNames = [
       'Ruan2020', 'Lucas77', 'MatheusBR', 'PedroX10', 'Kaio99', 'Gabriel22',
       'Felipe777', 'ViniciusX', 'JoãoPro', 'Rafa2025', 'Gustavo01', 'Henrique7',
@@ -215,14 +219,14 @@ export default function App() {
     };
 
     fetchStats(); fetchRanking(); fetchWinners();
-    const statsInt = setInterval(fetchStats, 5000);
-    const rankInt = setInterval(fetchRanking, 30000);
-    const winInt = setInterval(fetchWinners, 15000);
+    const statsInt = setInterval(fetchStats, 15000); // 15 seconds instead of 5
+    const rankInt = setInterval(fetchRanking, 60000); // 60 seconds instead of 30
+    const winInt = setInterval(fetchWinners, 30000); // 30 seconds instead of 15
 
     const fakeStatsInt = setInterval(() => {
       setOnlinePlayers(800 + Math.floor(Math.random() * 500));
       setActiveMatches(150 + Math.floor(Math.random() * 200));
-    }, 30000);
+    }, 45000);
 
     const fakeWinInt = setInterval(() => {
       const values = [5, 10, 15, 20, 25, 50];
@@ -234,10 +238,16 @@ export default function App() {
         }, ...prev];
         return next.slice(0, 50);
       });
-    }, 30000);
+    }, 45000);
 
-    return () => { clearInterval(statsInt); clearInterval(rankInt); clearInterval(winInt); clearInterval(fakeStatsInt); clearInterval(fakeWinInt); };
-  }, []);
+    return () => {
+      clearInterval(statsInt);
+      clearInterval(rankInt);
+      clearInterval(winInt);
+      clearInterval(fakeStatsInt);
+      clearInterval(fakeWinInt);
+    };
+  }, [currentView]);
 
   const triggerEmojiReaction = (emoji: string) => {
     const newReaction = {
@@ -287,6 +297,7 @@ export default function App() {
             setUserId(data.user.id);
             setUserName(data.user.name);
             setPlayer(data.user);
+            setAuthToken(savedToken);
             setIsAuthenticated(true);
             
             // Initial loads
@@ -361,6 +372,7 @@ export default function App() {
       setUserId(data.user.id);
       setUserName(data.user.name);
       setPlayer(data.user);
+      setAuthToken(data.token);
       setIsAuthenticated(true);
 
       fetchProfile(data.user.id);
@@ -407,6 +419,7 @@ export default function App() {
       setUserId(data.user.id);
       setUserName(data.user.name);
       setPlayer(data.user);
+      setAuthToken(data.token);
       setIsAuthenticated(true);
 
       fetchProfile(data.user.id);
@@ -432,6 +445,7 @@ export default function App() {
     setUserId('');
     setUserName('');
     setPlayer(null);
+    setAuthToken('');
     setIsAuthenticated(false);
   };
 
@@ -594,8 +608,11 @@ export default function App() {
     try {
       const response = await fetch('/api/users/update-name', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: userId, name: userName.trim() }),
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('damabet_token')}`
+        },
+        body: JSON.stringify({ name: userName.trim() }),
       });
       if (response.ok) {
         setIsEditingName(false);
@@ -1066,6 +1083,10 @@ export default function App() {
             setCurrentView('lobby');
             setLobbyTab('referral');
           }}
+          onOpenDeposit={() => {
+            setCurrentView('lobby');
+            setLobbyTab('deposit');
+          }}
           onLogout={handleLogout}
         />
       )}
@@ -1161,6 +1182,16 @@ export default function App() {
                   }`}
                 >
                   🤝 <span className="hidden sm:inline">Indique & Ganhe (Bônus)</span><span className="sm:hidden">Bônus</span>
+                </button>
+                <button
+                  onClick={() => setLobbyTab('deposit')}
+                  className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-black text-[10px] sm:text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
+                    lobbyTab === 'deposit'
+                      ? 'bg-[#FABF18] text-[#142c23] shadow-lg ring-1 ring-[#FABF18]'
+                      : 'bg-[#1c1917]/90 text-stone-300 border border-stone-850 hover:bg-stone-800'
+                  }`}
+                >
+                  ⚡ <span className="hidden sm:inline">Depositar via PIX</span><span className="sm:hidden">PIX</span>
                 </button>
               </div>
 
@@ -1357,7 +1388,7 @@ export default function App() {
 
               </div>
                 </>
-              ) : (
+              ) : lobbyTab === 'referral' ? (
                 <ReferralsDashboard
                   userId={userId}
                   userName={userName}
@@ -1365,6 +1396,11 @@ export default function App() {
                   invitedCount={invitedCount}
                   onClaimReward={handleClaimReferralReward}
                   claimedRewards={claimedRewards}
+                />
+              ) : (
+                <DepositPage
+                  onActionComplete={() => fetchProfile(userId)}
+                  token={authToken}
                 />
               )}
 
@@ -1869,7 +1905,7 @@ export default function App() {
             winnerName={activeGame.winnerId ? (activeGame.winnerId === activeGame.host.id ? activeGame.host.name : activeGame.guest?.name || 'Adversário') : ''}
             isDraw={!activeGame.winnerId}
             isPlayerWinner={activeGame.winnerId === userId}
-            prize={activeGame.prizePool}
+            prize={activeGame.winnerId === userId ? activeGame.prizePool : (!activeGame.winnerId ? activeGame.betAmount : 0)}
             balance={player ? player.balance : 0}
             onClose={() => {
               setShowVictoryOverlay(false);
