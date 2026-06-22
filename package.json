@@ -3,13 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "install:all": "npm install && npm install --prefix backend && npm install --prefix frontend",
+    "install:all": "npm install --include=dev && npm install --include=dev --prefix backend && npm install --include=dev --prefix frontend",
     "dev:backend": "npm run dev --prefix backend",
     "dev:frontend": "npm run dev --prefix frontend",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "prebuild": "npm run install:all",
     "build": "npm run build --prefix backend && npm run build --prefix frontend && esbuild backend/server.ts --bundle --platform=node --format=esm --outfile=server.mjs --external:express --external:cors --external:mercadopago --external:pg"
   },
-  "devDependencies": {
+  "dependencies": {
     "concurrently": "^8.2.2",
     "esbuild": "^0.20.1"
   }
