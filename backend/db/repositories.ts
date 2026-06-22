@@ -683,4 +683,38 @@ export class WithdrawalRepository {
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
   }
+
+  static async findAll(): Promise<(Withdrawal & { userName?: string })[]> {
+    if (isPostgresActive && pool) {
+      const { rows } = await pool.query(
+        `SELECT w.*, u.name as user_name 
+         FROM withdrawals w 
+         LEFT JOIN users u ON w.user_id = u.id 
+         ORDER BY w.created_at DESC`
+      );
+      return rows.map((r: any) => ({
+        id: r.id,
+        userId: r.user_id,
+        amount: parseFloat(r.amount),
+        pixKey: r.pix_key,
+        pixKeyType: r.pix_key_type as any,
+        status: r.status as any,
+        createdAt: new Date(r.created_at).toISOString(),
+        approvedAt: r.approved_at ? new Date(r.approved_at).toISOString() : undefined,
+        userName: r.user_name || undefined
+      }));
+    } else {
+      const wList = getWithdrawalsCache();
+      const uList = getUsersCache();
+      return wList
+        .map(w => {
+          const user = uList.find(u => u.id === w.userId);
+          return {
+            ...w,
+            userName: user ? user.name : undefined
+          };
+        })
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+  }
 }

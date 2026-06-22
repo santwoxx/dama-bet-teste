@@ -8,6 +8,7 @@ import VictoryAnimation from './components/VictoryAnimation';
 import { playReactionSound, playWinSound, playMoveSound, playCaptureSound } from './utils/audio';
 import { motion, AnimatePresence } from 'motion/react';
 import DepositPage from './components/DepositPage';
+import AdminDashboard from './components/AdminDashboard';
 
 // ─── Sparkle Background Overlay (Tigrinho Style) ─────────────────────
 const SparkleBg = React.memo(function SparkleBg({ density = 15, className = '' }: { density?: number; className?: string }) {
@@ -131,7 +132,7 @@ export default function App() {
   const [boardConfig, setBoardConfig] = useState<'8X8-8' | '8X8-12' | '10X10-20'>('8X8-12');
   
   // Tab views and affiliate simulation states
-  const [lobbyTab, setLobbyTab] = useState<'play' | 'referral' | 'deposit'>('play');
+  const [lobbyTab, setLobbyTab] = useState<'play' | 'referral' | 'deposit' | 'admin'>('play');
   const [invitedCount, setInvitedCount] = useState<number>(() => {
     const saved = localStorage.getItem('damabet_invited_count');
     return saved ? parseInt(saved, 10) : 0;
@@ -1193,6 +1194,18 @@ export default function App() {
                 >
                   ⚡ <span className="hidden sm:inline">Depositar via PIX</span><span className="sm:hidden">PIX</span>
                 </button>
+                {player && (player.name.toLowerCase().includes('admin') || player.id.toLowerCase().includes('admin')) && (
+                  <button
+                    onClick={() => setLobbyTab('admin')}
+                    className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-black text-[10px] sm:text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
+                      lobbyTab === 'admin'
+                        ? 'bg-[#FABF18] text-[#142c23] shadow-lg ring-1 ring-[#FABF18]'
+                        : 'bg-[#1c1917]/90 text-amber-400 border border-amber-900/35 hover:bg-[#FABF18]/10'
+                    }`}
+                  >
+                    👑 <span className="hidden sm:inline">Painel Admin</span><span className="sm:hidden">Admin</span>
+                  </button>
+                )}
               </div>
 
               {lobbyTab === 'play' ? (
@@ -1397,11 +1410,13 @@ export default function App() {
                   onClaimReward={handleClaimReferralReward}
                   claimedRewards={claimedRewards}
                 />
-              ) : (
+              ) : lobbyTab === 'deposit' ? (
                 <DepositPage
                   onActionComplete={() => fetchProfile(userId)}
                   token={authToken}
                 />
+              ) : (
+                <AdminDashboard token={authToken} />
               )}
 
               {/* Weekly Ranking + Last Winners Section */}

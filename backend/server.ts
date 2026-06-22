@@ -717,8 +717,23 @@ app.get('/api/withdrawals', requireAuth, async (req: AuthenticatedRequest, res) 
   }
 });
 
+// GET all withdrawals list (Admin only)
+app.get('/api/admin/withdrawals', requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const user = await UserRepository.findById(req.userId!);
+    if (!user || (!user.name.toLowerCase().includes('admin') && !user.id.toLowerCase().includes('admin'))) {
+      return res.status(403).json({ error: 'Acesso negado. Apenas administradores.' });
+    }
+    const list = await WithdrawalRepository.findAll();
+    res.json(list);
+  } catch (err) {
+    console.error('Error fetching admin withdrawals:', err);
+    res.status(500).json({ error: 'Erro ao listar solicitações de saque para administrador.' });
+  }
+});
+
 // Admin change withdrawal status (e.g. approve/reject/failed/processing/cancelled)
-app.post('/api/admin/withdrawals/status', async (req, res) => {
+app.post('/api/admin/withdrawals/status', requireAuth, async (req: AuthenticatedRequest, res) => {
   const { withdrawalId, status } = req.body;
   const allowedStatuses = ['approved', 'rejected', 'failed', 'cancelled', 'processing'];
   
@@ -727,6 +742,11 @@ app.post('/api/admin/withdrawals/status', async (req, res) => {
   }
 
   try {
+    const user = await UserRepository.findById(req.userId!);
+    if (!user || (!user.name.toLowerCase().includes('admin') && !user.id.toLowerCase().includes('admin'))) {
+      return res.status(403).json({ error: 'Acesso negado. Apenas administradores.' });
+    }
+
     const w = await WithdrawalRepository.findById(withdrawalId);
     if (!w) {
       return res.status(404).json({ error: 'Solicitação de saque não encontrada.' });
