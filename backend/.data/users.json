@@ -1,0 +1,93 @@
+[
+  {
+    "id": "sec_eothu24",
+    "name": "ReiDoTabu#8554",
+    "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=sec_eothu24",
+    "balance": 100,
+    "botGamesPlayed": 0,
+    "bonusBalance": 0,
+    "rolloverRequired": 0,
+    "rolloverWagered": 0
+  },
+  {
+    "id": "sec_aq5bs85",
+    "name": "Mestre das Pedras#7833",
+    "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=sec_aq5bs85",
+    "balance": 100,
+    "botGamesPlayed": 0,
+    "bonusBalance": 0,
+    "rolloverRequired": 0,
+    "rolloverWagered": 0
+  },
+  {
+    "id": "user_4c6a03349dc99a4b",
+    "name": "julian",
+    "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=user_4c6a03349dc99a4b",
+    "balance": 100,
+    "email": "xeravc@gmail.com",
+    "botGamesPlayed": 0,
+    "bonusBalance": 0,
+    "rolloverRequired": 0,
+    "rolloverWagered": 0,
+    "passwordHash": "e092fb8a7fe54bc6126b7588f4d1c1e6af6c1b8c3a1efaa7b5ffed1037893ae5d4391489eb64426c1201c1fe3fbc3e9f5edf21a0b66d70cd00e778ffa1a37245",
+    "passwordSalt": "34fe72638bc0ca20b691f98cf344db01"
+  },
+  {
+    "id": "sec_tsa1yoa",
+    "name": "ReiDoTabu#1714",
+    "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=sec_tsa1yoa",
+    "balance": 100,
+    "botGamesPlayed": 0,
+    "bonusBalance": 0,
+    "rolloverRequired": 0,
+    "rolloverWagered": 0
+  },
+  {
+    "id": "user_3933ae3d54f89c38",
+    "name": "julian123",
+    "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=user_3933ae3d54f89c38",
+    "balance": 100,
+    "email": "brisasofc@gmail.com",
+    "botGamesPlayed": 0,
+    "bonusBalance": 0,
+    "rolloverRequired": 0,
+    "rolloverWagered": 0,
+    "passwordHash": "9bfd06344eee0b53777c5c0594376903dd4b0b2c19f43ccfef43c9103a845f39d71a49d205dbf734b74d70dfa5231c81fb828fc4dd61e8b37ce75537ec160d55",
+    "passwordSalt": "85bd578f6c91281ecf60fd0c3c31e77e"
+  },
+  {
+    "id": "sec_jmelj4m",
+    "name": "ReiDoTabu#5680",
+    "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=sec_jmelj4m",
+    "balance": 100,
+    "botGamesPlayed": 0,
+    "bonusBalance": 0,
+    "rolloverRequired": 0,
+    "rolloverWagered": 0
+  },
+  {
+    "id": "user_50859a117d9efe13",
+    "name": "testuser",
+    "email": "testuser@gmail.com",
+    "passwordHash": "2423ac19f42cc2f1c7212dbac4ad7e933fb65a99bb79c437ad6bf9b4a94dfead62f92bc7010aa546c9a5f0b80e59536f07ef33545cb9e69d5f7788d43216deb3",
+    "passwordSalt": "ee1b7ff0458ec507ee83d25a9bb1bce0",
+    "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=user_50859a117d9efe13",
+    "balance": 80,
+    "botGamesPlayed": 1,
+    "bonusBalance": 0,
+    "rolloverRequired": 0,
+    "rolloverWagered": 0
+  },
+  {
+    "id": "user_65ed1a09fe696c21",
+    "name": "Caiom7",
+    "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=user_f6759ae830daeebb",
+    "balance": 1500,
+    "botGamesPlayed": 0,
+    "bonusBalance": 0,
+    "rolloverRequired": 0,
+    "rolloverWagered": 0,
+    "passwordHash": "09492d1369f7c565d5904e3d1c320ee35d0b2574b16fa3ccc8b03971e750bba87c4e878ac99609e68dc92b15ca939475333da3ff8d69c894c1eac03aecdbb295",
+    "passwordSalt": "85c2ca77abee132e36d561140d3916c7"
+  }
+]
