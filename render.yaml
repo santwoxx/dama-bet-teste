@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: dama-bet-backend
+    name: dama-bet-teste
     runtime: node
     repo: https://github.com/santwoxx/dama-bet-teste
     rootDir: backend
