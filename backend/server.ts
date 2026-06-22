@@ -1669,8 +1669,51 @@ app.use((err: any, req: any, res: any, _next: any) => {
 });
 
 // Boot backend server
+async function seedAdminUser() {
+  const adminUsername = 'admin';
+  const adminEmail = 'admin@gmail.com';
+  const adminPassword = '@3admin@#';
+
+  try {
+    const existing = await UserRepository.findByEmailOrUsername(adminUsername);
+    if (!existing) {
+      console.log(`[BOOTSTRAP] Seeding admin user...`);
+      const { hash, salt } = hashPassword(adminPassword);
+      const id = 'user_admin';
+      const adminUser: Player = {
+        id,
+        name: adminUsername,
+        email: adminEmail,
+        passwordHash: hash,
+        passwordSalt: salt,
+        avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${id}`,
+        balance: 100.0,
+        botGamesPlayed: 0,
+        bonusBalance: 0,
+        rolloverRequired: 0,
+        rolloverWagered: 0
+      };
+      await UserRepository.save(adminUser);
+      console.log(`[BOOTSTRAP] Admin user successfully seeded.`);
+    } else {
+      console.log(`[BOOTSTRAP] Admin user already exists. Checking/Updating password configuration...`);
+      const { hash, salt } = hashPassword(adminPassword);
+      existing.passwordHash = hash;
+      existing.passwordSalt = salt;
+      if (!existing.name.toLowerCase().includes('admin')) {
+        existing.name = 'admin';
+      }
+      await UserRepository.save(existing);
+      console.log(`[BOOTSTRAP] Admin user password configuration updated/synchronized.`);
+    }
+  } catch (err) {
+    console.error('[BOOTSTRAP] Failed to seed admin user:', err);
+  }
+}
+
 async function startServer() {
   await bootstrapDatabase();
+  await seedAdminUser();
   app.listen(PORT, () => {
     console.log(`Dama Bet API Backend running on port ${PORT}`);
   });
