@@ -350,23 +350,13 @@ async function getOrCreateUser(id: string, customName?: string): Promise<Player>
       id,
       name: defaultName,
       avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${id}`,
-      balance: 100.0,
+      balance: 0,
       botGamesPlayed: 0,
       bonusBalance: 0,
       rolloverRequired: 0,
       rolloverWagered: 0
     };
     await UserRepository.save(user);
-
-    const welcomeTx: Transaction = {
-      id: `tx-welcome-${crypto.randomBytes(4).toString('hex')}`,
-      userId: id,
-      type: 'deposit',
-      amount: 100.0,
-      description: 'Saldo de boas-vindas simulado (100% seguro)',
-      createdAt: new Date().toISOString()
-    };
-    await TransactionRepository.create(welcomeTx);
   } else if (customName && customName !== user.name) {
     user.name = customName;
     await UserRepository.save(user);
@@ -416,7 +406,7 @@ app.post('/api/auth/register', async (req, res) => {
     passwordHash: hash,
     passwordSalt: salt,
     avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${id}`,
-    balance: 100.0,
+    balance: 0,
     botGamesPlayed: 0,
     bonusBalance: 0,
     rolloverRequired: 0,
@@ -424,16 +414,6 @@ app.post('/api/auth/register', async (req, res) => {
   };
 
   await UserRepository.save(newUser);
-
-  const welcomeTx: Transaction = {
-    id: `tx-welcome-${crypto.randomBytes(4).toString('hex')}`,
-    userId: id,
-    type: 'deposit',
-    amount: 100.0,
-    description: 'Saldo de boas-vindas para treinar no DamaBet',
-    createdAt: new Date().toISOString()
-  };
-  await TransactionRepository.create(welcomeTx);
 
   const token = signToken({ userId: id });
 

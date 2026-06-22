@@ -46,7 +46,7 @@ async function initializePostgresTables() {
         password_hash VARCHAR(255),
         password_salt VARCHAR(255),
         avatar VARCHAR(255),
-        balance NUMERIC(15, 2) DEFAULT 100.00,
+        balance NUMERIC(15, 2) DEFAULT 0,
         locked_balance NUMERIC(15, 2) DEFAULT 0.00,
         bot_games_played INT DEFAULT 0,
         bonus_balance NUMERIC(15, 2) DEFAULT 0.00,
