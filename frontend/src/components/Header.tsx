@@ -26,6 +26,12 @@ export default function Header({ player, transactions, onActionComplete, onRefre
 
   const handleWalletAction = async () => {
     setError('');
+
+    if (modalType === 'deposit') {
+      window.open('https://livepix.gg/damabet', '_blank');
+      return;
+    }
+
     let parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       setError('Insira um valor maior que zero.');
@@ -201,15 +207,8 @@ export default function Header({ player, transactions, onActionComplete, onRefre
               <div className="flex gap-1 ml-1.5">
                 <button
                   id="header-deposit"
-                  onClick={() => {
-                    if (onOpenDeposit) {
-                      onOpenDeposit();
-                    } else {
-                      setModalType('deposit');
-                      setShowWalletModal(true);
-                    }
-                  }}
-                  title="Depositar fundos via PIX"
+                  onClick={() => window.open('https://livepix.gg/damabet', '_blank')}
+                  title="Depositar fundos"
                   className="bg-gradient-to-br from-[#FABF18] to-[#d97706] hover:from-[#f59e0b] hover:to-[#b45309] text-stone-900 p-1 rounded font-black transition-all shadow-[0_0_8px_rgba(250,191,24,0.3)] hover:shadow-[0_0_12px_rgba(250,191,24,0.5)]"
                 >
                   <Plus className="w-3 h-3 text-[#142c23] stroke-[3px]" />
@@ -441,7 +440,7 @@ export default function Header({ player, transactions, onActionComplete, onRefre
                 className="w-full bg-gradient-to-r from-[#FABF18] via-[#d97706] to-[#FABF18] hover:from-[#f59e0b] hover:to-[#b45309] text-stone-950 font-black text-xs py-3 rounded uppercase tracking-wider transition-all duration-150 cursor-pointer btn-shimmer overflow-hidden shadow-lg hover:shadow-[0_0_20px_rgba(250,191,24,0.4)]"
                 style={{ backgroundSize: '200% 100%' }}
               >
-                {loading ? 'Processando transação...' : modalType === 'deposit' ? '✦ EFETUAR DEPÓSITO PIX ✦' : '✦ SOLICITAR RETIRADA PIX ✦'}
+                {loading ? 'Processando transação...' : modalType === 'deposit' ? '✦ DEPOSITAR VIA LIVEPIX ✦' : '✦ SOLICITAR RETIRADA PIX ✦'}
               </button>
             </div>
           </motion.div>
