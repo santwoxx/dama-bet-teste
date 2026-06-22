@@ -1,6 +1,8 @@
 {
-  "cleanUrls": true,
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "installCommand": "npm install",
   "outputDirectory": "frontend/dist",
+  "cleanUrls": true,
   "rewrites": [
     {
       "source": "/api/:path*",
