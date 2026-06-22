@@ -660,6 +660,7 @@ app.post('/api/deposit/create', requireAuth, async (req: AuthenticatedRequest, r
     return res.status(401).json({ error: 'Usuário não encontrado.' });
   }
 
+  const depositId = `dep-${crypto.randomBytes(8).toString('hex')}`;
   const expirationMinutes = 30;
   const expirationDate = new Date(Date.now() + expirationMinutes * 60 * 1000);
   
@@ -675,7 +676,7 @@ app.post('/api/deposit/create', requireAuth, async (req: AuthenticatedRequest, r
           payer: {
             email: user.email || 'jogador@damabet.com'
           },
-          external_reference: user.id,
+          external_reference: depositId,
           notification_url: `${process.env.APP_URL || 'https://dama-bet.onrender.com'}/api/webhooks/mercadopago`,
           date_of_expiration: expirationDate.toISOString()
         }
@@ -702,7 +703,6 @@ app.post('/api/deposit/create', requireAuth, async (req: AuthenticatedRequest, r
     };
   }
 
-  const depositId = `dep-${crypto.randomBytes(8).toString('hex')}`;
   const mpPaymentId = String(paymentResponse.id);
 
   const newDeposit: Deposit = {
@@ -753,13 +753,26 @@ app.post('/api/webhooks/mercadopago', async (req, res) => {
       });
 
       if (ts && v1) {
-        const message = `id:${paymentId};topic:payment;`;
+        const xRequestId = (req.headers['x-request-id'] || '') as string;
+        const dataId = String(req.query['data.id'] || paymentId).trim().toLowerCase();
+        
+        // Reconstruct manifest string matching official Mercado Pago signature spec:
+        // id:[data.id];request-id:[x-request-id];ts:[ts];
+        const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
+        
         const calculatedSignature = crypto
           .createHmac('sha256', webhookSecret)
-          .update(`ts=${ts};${message}`)
+          .update(manifest)
           .digest('hex');
 
-        if (calculatedSignature !== v1) {
+        let isSignatureValid = false;
+        try {
+          isSignatureValid = crypto.timingSafeEqual(Buffer.from(v1), Buffer.from(calculatedSignature));
+        } catch {
+          isSignatureValid = (v1 === calculatedSignature);
+        }
+
+        if (!isSignatureValid) {
           console.warn('[WEBHOOK_SIGNATURE_MISMATCH] Signature verification failed for payment ID:', paymentId);
           return res.status(401).json({ error: 'Assinatura inválida do webhook' });
         }
