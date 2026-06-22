@@ -7,8 +7,7 @@
     "dev:backend": "npm run dev --prefix backend",
     "dev:frontend": "npm run dev --prefix frontend",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "prebuild": "npm run install:all",
-    "build": "npm run build --prefix backend && npm run build --prefix frontend && esbuild backend/server.ts --bundle --platform=node --format=esm --outfile=server.mjs --external:express --external:cors --external:mercadopago --external:pg"
+    "build": "npm install --include=dev --prefix frontend && npm run build --prefix frontend"
   },
   "dependencies": {
     "concurrently": "^8.2.2",
