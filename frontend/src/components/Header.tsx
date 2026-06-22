@@ -176,7 +176,7 @@ export default function Header({ player, transactions, onActionComplete, onRefre
                   </>
                 ) : (
                   <>
-                    <span className="text-[7px] sm:text-[8px] uppercase font-bold tracking-wider text-emerald-400">Simulador Bet</span>
+                    <span className="text-[7px] sm:text-[8px] uppercase font-bold tracking-wider text-emerald-400">Saldo Atual</span>
                     <span className="text-[11px] sm:text-sm font-mono font-black text-amber-300 mt-0.5">{formattedBalance}</span>
                   </>
                 )}

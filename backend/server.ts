@@ -281,7 +281,7 @@ async function runBotTurnIfActive(gameId: string) {
       }
     }
 
-    games.set(gameId, game);
+    await gameKvSet(game);
     broadcastGame(gameId);
     broadcastLobby();
   }
