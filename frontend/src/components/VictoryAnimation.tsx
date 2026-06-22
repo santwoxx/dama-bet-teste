@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, type MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Crown, Share2, Wallet, Check, Flame, Trophy, Zap, Repeat, Home, Frown } from 'lucide-react';
 
@@ -84,7 +84,7 @@ export default function VictoryAnimation({
     setClicks((c) => c + 1);
   }, []);
 
-  const handleBgClick = useCallback((e: React.MouseEvent) => {
+  const handleBgClick = useCallback((e: MouseEvent) => {
     addBurst(e.clientX, e.clientY);
   }, [addBurst]);
 
