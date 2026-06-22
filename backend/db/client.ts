@@ -47,6 +47,7 @@ async function initializePostgresTables() {
         password_salt VARCHAR(255),
         avatar VARCHAR(255),
         balance NUMERIC(15, 2) DEFAULT 100.00,
+        locked_balance NUMERIC(15, 2) DEFAULT 0.00,
         bot_games_played INT DEFAULT 0,
         bonus_balance NUMERIC(15, 2) DEFAULT 0.00,
         rollover_required NUMERIC(15, 2) DEFAULT 0.00,
@@ -54,6 +55,11 @@ async function initializePostgresTables() {
       );
     `);
 
+    // Migrate existing DB schemas if locked_balance was missing
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_balance NUMERIC(15, 2) DEFAULT 0.00;
+    `);
+ 
     await client.query(`
       CREATE TABLE IF NOT EXISTS deposits (
         id VARCHAR(255) PRIMARY KEY,
@@ -66,7 +72,7 @@ async function initializePostgresTables() {
         expiration_at TIMESTAMP WITH TIME ZONE
       );
     `);
-
+ 
     await client.query(`
       CREATE TABLE IF NOT EXISTS transactions (
         id VARCHAR(255) PRIMARY KEY,
@@ -78,6 +84,19 @@ async function initializePostgresTables() {
       );
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS withdrawals (
+        id VARCHAR(255) PRIMARY KEY,
+        user_id VARCHAR(255) REFERENCES users(id),
+        amount NUMERIC(15, 2) NOT NULL,
+        pix_key VARCHAR(255) NOT NULL,
+        pix_key_type VARCHAR(50) NOT NULL,
+        status VARCHAR(50) NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        approved_at TIMESTAMP WITH TIME ZONE
+      );
+    `);
+ 
     await client.query(`
       CREATE TABLE IF NOT EXISTS webhook_events (
         id VARCHAR(255) PRIMARY KEY,

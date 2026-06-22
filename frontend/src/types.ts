@@ -18,6 +18,7 @@ export interface Player {
   name: string;
   avatar: string; // url or keyword
   balance: number; // simulated wallet balance
+  lockedBalance?: number;
   email?: string;
   botGamesPlayed?: number;
   bonusBalance?: number;
@@ -96,4 +97,15 @@ export interface AppState {
   lobbyGames: Game[];
   transactions: Transaction[];
   selectedGameId: string | null;
+}
+
+export interface Withdrawal {
+  id: string;
+  userId: string;
+  amount: number;
+  pixKey: string;
+  pixKeyType: 'cpf' | 'cnpj' | 'email' | 'phone' | 'random';
+  status: 'pending' | 'processing' | 'approved' | 'rejected' | 'cancelled' | 'failed';
+  createdAt: string;
+  approvedAt?: string;
 }

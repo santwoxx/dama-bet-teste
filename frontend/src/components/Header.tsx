@@ -22,18 +22,34 @@ export default function Header({ player, transactions, onActionComplete, onRefre
   const [loading, setLoading] = useState(false);
   const [pixKey] = useState(`pix-${player.id}@damabet.com`);
   const [withdrawalPixKey, setWithdrawalPixKey] = useState('');
+  const [withdrawalPixKeyType, setWithdrawalPixKeyType] = useState<'cpf' | 'cnpj' | 'email' | 'phone' | 'random'>('email');
 
   const handleWalletAction = async () => {
     setError('');
-    const parsedAmount = parseFloat(amount);
+    let parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       setError('Insira um valor maior que zero.');
       return;
     }
+    parsedAmount = parseFloat(parsedAmount.toFixed(2));
 
-    if (modalType === 'withdraw' && player.balance < parsedAmount) {
-      setError('Saldo de carteira virtual insuficiente.');
-      return;
+    if (modalType === 'withdraw') {
+      if (parsedAmount < 65) {
+        setError('O valor mínimo para saque é R$ 65,00.');
+        return;
+      }
+      if (parsedAmount > 5000) {
+        setError('O valor máximo por saque é R$ 5.000,00.');
+        return;
+      }
+      if (!withdrawalPixKey.trim()) {
+        setError('Por favor, informe a chave PIX de destino.');
+        return;
+      }
+      if (player.balance < parsedAmount) {
+        setError('Saldo de carteira virtual insuficiente.');
+        return;
+      }
     }
 
     setLoading(true);
@@ -52,7 +68,8 @@ export default function Header({ player, transactions, onActionComplete, onRefre
       };
 
       if (modalType === 'withdraw') {
-        bodyData.pixKey = withdrawalPixKey.trim() || player.email || pixKey;
+        bodyData.pixKey = withdrawalPixKey.trim();
+        bodyData.pixKeyType = withdrawalPixKeyType;
       } else {
         bodyData.id = player.id;
       }
@@ -201,6 +218,9 @@ export default function Header({ player, transactions, onActionComplete, onRefre
                   id="header-withdraw"
                   onClick={() => {
                     setModalType('withdraw');
+                    setAmount('65');
+                    setWithdrawalPixKey('');
+                    setWithdrawalPixKeyType('email');
                     setShowWalletModal(true);
                   }}
                   title="Sacar fundos virtuais"
@@ -335,7 +355,7 @@ export default function Header({ player, transactions, onActionComplete, onRefre
                   {modalType === 'deposit' ? 'Sugestões de Depósito (R$)' : 'Sugestões de Saque (R$)'}
                 </label>
                 <div className="grid grid-cols-4 gap-2">
-                  {['20', '50', '100', '200'].map((val) => (
+                  {(modalType === 'deposit' ? ['20', '50', '100', '200'] : ['65', '100', '200', '500']).map((val) => (
                     <button
                       key={val}
                       onClick={() => setAmount(val)}
@@ -363,31 +383,55 @@ export default function Header({ player, transactions, onActionComplete, onRefre
               </div>
 
               {modalType === 'withdraw' && (
-                <div>
-                  <label className="block text-[10px] uppercase tracking-widest text-amber-400 mb-1.5 font-bold">
-                    Chave PIX de Destino
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Ex: CPF, Telefone, E-mail ou Chave Aleatória..."
-                    value={withdrawalPixKey}
-                    onChange={(e) => setWithdrawalPixKey(e.target.value)}
-                    className="w-full bg-stone-900 border border-stone-750 rounded px-3 py-2 text-sm text-[#FABF18] focus:outline-none focus:border-[#FABF18]"
-                  />
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-widest text-amber-400 mb-1.5 font-bold">
+                      Tipo de Chave PIX
+                    </label>
+                    <select
+                      value={withdrawalPixKeyType}
+                      onChange={(e) => setWithdrawalPixKeyType(e.target.value as any)}
+                      className="w-full bg-stone-900 border border-stone-750 rounded px-3 py-2 text-sm text-[#FABF18] focus:outline-none focus:border-[#FABF18]"
+                    >
+                      <option value="email">E-mail</option>
+                      <option value="cpf">CPF</option>
+                      <option value="cnpj">CNPJ</option>
+                      <option value="phone">Celular (Telefone)</option>
+                      <option value="random">Chave Aleatória</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-widest text-amber-400 mb-1.5 font-bold">
+                      Chave PIX de Destino
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={
+                        withdrawalPixKeyType === 'cpf' ? '000.000.000-00' :
+                        withdrawalPixKeyType === 'cnpj' ? '00.000.000/0000-00' :
+                        withdrawalPixKeyType === 'phone' ? '+55 (00) 00000-0000' :
+                        withdrawalPixKeyType === 'email' ? 'exemplo@email.com' :
+                        'Chave aleatória...'
+                      }
+                      value={withdrawalPixKey}
+                      onChange={(e) => setWithdrawalPixKey(e.target.value)}
+                      className="w-full bg-stone-900 border border-stone-750 rounded px-3 py-2 text-sm text-[#FABF18] focus:outline-none focus:border-[#FABF18]"
+                    />
+                  </div>
                 </div>
               )}
 
               <div className="bg-stone-950/80 p-3 rounded border border-stone-850 space-y-2 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="text-stone-500">Chave PIX {modalType === 'withdraw' ? 'de Destino' : '(E-mail)'}:</span>
-                  <span className="font-mono text-stone-300 truncate max-w-[180px]" title={modalType === 'withdraw' ? (withdrawalPixKey || player.email || pixKey) : (player.email || pixKey)}>
-                    {modalType === 'withdraw' ? (withdrawalPixKey || player.email || pixKey) : (player.email || pixKey)}
+                  <span className="font-mono text-stone-300 truncate max-w-[180px]" title={modalType === 'withdraw' ? `${withdrawalPixKeyType}: ${withdrawalPixKey}` : (player.email || pixKey)}>
+                    {modalType === 'withdraw' ? (withdrawalPixKey ? `${withdrawalPixKeyType}: ${withdrawalPixKey}` : 'Não informada') : (player.email || pixKey)}
                   </span>
                 </div>
                 {modalType === 'deposit' ? (
                   <p className="text-[10.5px] text-stone-400">O depósito via PIX do Mercado Pago será creditado na sua conta automaticamente.</p>
                 ) : (
-                  <p className="text-[10.5px] text-[#FABF18] font-medium">A solicitação de saque será enviada. O administrador processará a transferência manual via PIX em breve.</p>
+                  <p className="text-[10.5px] text-[#FABF18] font-medium">A solicitação de saque será enviada. O administrador processará a transferência manual via PIX em breve (Limite Mínimo R$ 65,00).</p>
                 )}
               </div>
 

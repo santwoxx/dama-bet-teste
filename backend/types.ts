@@ -17,6 +17,7 @@ export interface Player {
   name: string;
   avatar: string;
   balance: number;
+  lockedBalance?: number;
   email?: string;
   botGamesPlayed?: number;
   bonusBalance?: number;
@@ -103,4 +104,15 @@ export interface WebhookEvent {
   mpPaymentId: string;
   eventType: string;
   processedAt: string;
+}
+
+export interface Withdrawal {
+  id: string;
+  userId: string;
+  amount: number;
+  pixKey: string;
+  pixKeyType: 'cpf' | 'cnpj' | 'email' | 'phone' | 'random';
+  status: 'pending' | 'processing' | 'approved' | 'rejected' | 'cancelled' | 'failed';
+  createdAt: string;
+  approvedAt?: string;
 }

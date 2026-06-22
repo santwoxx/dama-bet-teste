@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Player, Deposit, Transaction, WebhookEvent } from '../types.js';
+import { Player, Deposit, Transaction, WebhookEvent, Withdrawal } from '../types.js';
 import { pool, isPostgresActive } from './client.js';
 
 const DATA_DIR = path.join(process.cwd(), '.data');
@@ -13,12 +13,14 @@ const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const DEPOSITS_FILE = path.join(DATA_DIR, 'deposits.json');
 const TRANSACTIONS_FILE = path.join(DATA_DIR, 'transactions.json');
 const WEBHOOK_EVENTS_FILE = path.join(DATA_DIR, 'webhook_events.json');
+const WITHDRAWALS_FILE = path.join(DATA_DIR, 'withdrawals.json');
 
 // In-memory Caches for fast O(1) lookups
 let cachedUsers: Player[] | null = null;
 let cachedDeposits: Deposit[] | null = null;
 let cachedTransactions: Transaction[] | null = null;
 let cachedWebhookEvents: WebhookEvent[] | null = null;
+let cachedWithdrawals: Withdrawal[] | null = null;
 
 // Helper to read JSON database
 function readJsonFile<T>(filePath: string, defaultValue: T): T {
@@ -62,6 +64,13 @@ function getWebhookEventsCache(): WebhookEvent[] {
   return cachedWebhookEvents;
 }
 
+function getWithdrawalsCache(): Withdrawal[] {
+  if (cachedWithdrawals === null) {
+    cachedWithdrawals = readJsonFile<Withdrawal[]>(WITHDRAWALS_FILE, []);
+  }
+  return cachedWithdrawals;
+}
+
 // Helper to write JSON database asynchronously (non-blocking)
 async function writeJsonFileAsync<T>(filePath: string, data: T): Promise<void> {
   try {
@@ -83,6 +92,7 @@ export class UserRepository {
         name: r.name,
         avatar: r.avatar,
         balance: parseFloat(r.balance),
+        lockedBalance: parseFloat(r.locked_balance || '0'),
         email: r.email,
         botGamesPlayed: r.bot_games_played,
         bonusBalance: parseFloat(r.bonus_balance),
@@ -112,6 +122,7 @@ export class UserRepository {
         name: r.name,
         avatar: r.avatar,
         balance: parseFloat(r.balance),
+        lockedBalance: parseFloat(r.locked_balance || '0'),
         email: r.email,
         botGamesPlayed: r.bot_games_played,
         bonusBalance: parseFloat(r.bonus_balance),
@@ -135,15 +146,16 @@ export class UserRepository {
       if (rows.length > 0) {
         await pool.query(
           `UPDATE users SET 
-            name = $2, avatar = $3, balance = $4, email = $5, bot_games_played = $6, 
-            bonus_balance = $7, rollover_required = $8, rollover_wagered = $9, 
-            password_hash = $10, password_salt = $11
+            name = $2, avatar = $3, balance = $4, locked_balance = $5, email = $6, bot_games_played = $7, 
+            bonus_balance = $8, rollover_required = $9, rollover_wagered = $10, 
+            password_hash = $11, password_salt = $12
            WHERE id = $1`,
           [
             user.id,
             user.name,
             user.avatar,
             user.balance,
+            user.lockedBalance || 0,
             user.email || null,
             user.botGamesPlayed || 0,
             user.bonusBalance || 0,
@@ -156,13 +168,14 @@ export class UserRepository {
       } else {
         await pool.query(
           `INSERT INTO users 
-            (id, name, avatar, balance, email, bot_games_played, bonus_balance, rollover_required, rollover_wagered, password_hash, password_salt) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+            (id, name, avatar, balance, locked_balance, email, bot_games_played, bonus_balance, rollover_required, rollover_wagered, password_hash, password_salt) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
           [
             user.id,
             user.name,
             user.avatar,
             user.balance,
+            user.lockedBalance || 0,
             user.email || null,
             user.botGamesPlayed || 0,
             user.bonusBalance || 0,
@@ -210,6 +223,7 @@ export class UserRepository {
         name: r.name,
         avatar: r.avatar,
         balance: parseFloat(r.balance),
+        lockedBalance: parseFloat(r.locked_balance || '0'),
         email: r.email,
         botGamesPlayed: r.bot_games_played,
         bonusBalance: parseFloat(r.bonus_balance),
@@ -438,6 +452,235 @@ export class WebhookEventRepository {
     } else {
       const list = getWebhookEventsCache();
       return list.find(e => e.mpPaymentId === mpPaymentId) || null;
+    }
+  }
+}
+
+// --- WithdrawalRepository ---
+export class WithdrawalRepository {
+  static async createWithdrawalTransaction(
+    w: Withdrawal,
+    balanceDeduction: number,
+    lockedBalanceAddition: number,
+    txLog: Transaction
+  ): Promise<void> {
+    if (isPostgresActive && pool) {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        
+        // 1. Update user balances (deduct balance, increase locked_balance)
+        await client.query(
+          `UPDATE users 
+           SET balance = balance - $1, locked_balance = locked_balance + $2 
+           WHERE id = $3`,
+          [balanceDeduction, lockedBalanceAddition, w.userId]
+        );
+
+        // 2. Insert into withdrawals
+        await client.query(
+          `INSERT INTO withdrawals (id, user_id, amount, pix_key, pix_key_type, status, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [w.id, w.userId, w.amount, w.pixKey, w.pixKeyType, w.status, new Date(w.createdAt)]
+        );
+
+        // 3. Insert transaction log
+        await client.query(
+          `INSERT INTO transactions (id, user_id, type, amount, description, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [txLog.id, txLog.userId, txLog.type, txLog.amount, txLog.description, new Date(txLog.createdAt)]
+        );
+
+        await client.query('COMMIT');
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    } else {
+      // Fallback JSON implementation
+      const user = await UserRepository.findById(w.userId);
+      if (!user) throw new Error('Usuário não encontrado');
+      
+      user.balance -= balanceDeduction;
+      user.lockedBalance = (user.lockedBalance || 0) + lockedBalanceAddition;
+      await UserRepository.save(user);
+
+      const wList = getWithdrawalsCache();
+      wList.push(w);
+      await writeJsonFileAsync(WITHDRAWALS_FILE, wList);
+
+      await TransactionRepository.create(txLog);
+    }
+  }
+
+  static async updateWithdrawalStatusTransaction(
+    id: string,
+    status: 'approved' | 'rejected' | 'failed' | 'cancelled' | 'processing',
+    approvedAt?: string
+  ): Promise<void> {
+    if (isPostgresActive && pool) {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        // Fetch current withdrawal to calculate balance adjustment
+        const { rows } = await client.query('SELECT * FROM withdrawals WHERE id = $1', [id]);
+        if (rows.length === 0) {
+          throw new Error('Retirada não encontrada');
+        }
+        const w = rows[0];
+        const amount = parseFloat(w.amount);
+        const userId = w.user_id;
+
+        // Update withdrawal status
+        await client.query(
+          'UPDATE withdrawals SET status = $2, approved_at = $3 WHERE id = $1',
+          [id, status, approvedAt ? new Date(approvedAt) : null]
+        );
+
+        if (status === 'approved') {
+          // If approved: unlock the balance (simply deduct it from locked_balance)
+          await client.query(
+            'UPDATE users SET locked_balance = GREATEST(0.00, locked_balance - $1) WHERE id = $2',
+            [amount, userId]
+          );
+        } else if (status === 'rejected' || status === 'failed' || status === 'cancelled') {
+          // If rejected/failed/cancelled: refund it back to balance, deduct locked_balance
+          await client.query(
+            `UPDATE users 
+             SET balance = balance + $1, 
+                 locked_balance = GREATEST(0.00, locked_balance - $1) 
+             WHERE id = $2`,
+            [amount, userId]
+          );
+        }
+
+        await client.query('COMMIT');
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+    } else {
+      const wList = getWithdrawalsCache();
+      const idx = wList.findIndex(w => w.id === id);
+      if (idx !== -1) {
+        const w = wList[idx];
+        const user = await UserRepository.findById(w.userId);
+        if (user) {
+          wList[idx].status = status;
+          if (approvedAt) {
+            wList[idx].approvedAt = approvedAt;
+          }
+
+          if (status === 'approved') {
+            user.lockedBalance = Math.max(0, (user.lockedBalance || 0) - w.amount);
+          } else if (status === 'rejected' || status === 'failed' || status === 'cancelled') {
+            user.balance += w.amount;
+            user.lockedBalance = Math.max(0, (user.lockedBalance || 0) - w.amount);
+          }
+          await UserRepository.save(user);
+        }
+        await writeJsonFileAsync(WITHDRAWALS_FILE, wList);
+      }
+    }
+  }
+
+  static async findById(id: string): Promise<Withdrawal | null> {
+    if (isPostgresActive && pool) {
+      const { rows } = await pool.query('SELECT * FROM withdrawals WHERE id = $1', [id]);
+      if (rows.length === 0) return null;
+      const r = rows[0];
+      return {
+        id: r.id,
+        userId: r.user_id,
+        amount: parseFloat(r.amount),
+        pixKey: r.pix_key,
+        pixKeyType: r.pix_key_type as any,
+        status: r.status as any,
+        createdAt: new Date(r.created_at).toISOString(),
+        approvedAt: r.approved_at ? new Date(r.approved_at).toISOString() : undefined
+      };
+    } else {
+      const list = getWithdrawalsCache();
+      return list.find(w => w.id === id) || null;
+    }
+  }
+
+  static async findPendingByUserId(userId: string): Promise<Withdrawal | null> {
+    if (isPostgresActive && pool) {
+      const { rows } = await pool.query(
+        "SELECT * FROM withdrawals WHERE user_id = $1 AND (status = 'pending' OR status = 'processing') LIMIT 1",
+        [userId]
+      );
+      if (rows.length === 0) return null;
+      const r = rows[0];
+      return {
+        id: r.id,
+        userId: r.user_id,
+        amount: parseFloat(r.amount),
+        pixKey: r.pix_key,
+        pixKeyType: r.pix_key_type as any,
+        status: r.status as any,
+        createdAt: new Date(r.created_at).toISOString(),
+        approvedAt: r.approved_at ? new Date(r.approved_at).toISOString() : undefined
+      };
+    } else {
+      const list = getWithdrawalsCache();
+      return list.find(w => w.userId === userId && (w.status === 'pending' || w.status === 'processing')) || null;
+    }
+  }
+
+  static async findLastByUserId(userId: string): Promise<Withdrawal | null> {
+    if (isPostgresActive && pool) {
+      const { rows } = await pool.query(
+        "SELECT * FROM withdrawals WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
+        [userId]
+      );
+      if (rows.length === 0) return null;
+      const r = rows[0];
+      return {
+        id: r.id,
+        userId: r.user_id,
+        amount: parseFloat(r.amount),
+        pixKey: r.pix_key,
+        pixKeyType: r.pix_key_type as any,
+        status: r.status as any,
+        createdAt: new Date(r.created_at).toISOString(),
+        approvedAt: r.approved_at ? new Date(r.approved_at).toISOString() : undefined
+      };
+    } else {
+      const list = getWithdrawalsCache();
+      const filtered = list.filter(w => w.userId === userId);
+      if (filtered.length === 0) return null;
+      return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+    }
+  }
+
+  static async findAllByUserId(userId: string): Promise<Withdrawal[]> {
+    if (isPostgresActive && pool) {
+      const { rows } = await pool.query(
+        'SELECT * FROM withdrawals WHERE user_id = $1 ORDER BY created_at DESC',
+        [userId]
+      );
+      return rows.map((r: any) => ({
+        id: r.id,
+        userId: r.user_id,
+        amount: parseFloat(r.amount),
+        pixKey: r.pix_key,
+        pixKeyType: r.pix_key_type as any,
+        status: r.status as any,
+        createdAt: new Date(r.created_at).toISOString(),
+        approvedAt: r.approved_at ? new Date(r.approved_at).toISOString() : undefined
+      }));
+    } else {
+      const list = getWithdrawalsCache();
+      return list
+        .filter(w => w.userId === userId)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
   }
 }

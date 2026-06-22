@@ -4,8 +4,8 @@ import fs from 'fs';
 import crypto from 'crypto';
 import cors from 'cors';
 import { initializeBoard, getValidMoves, executeMove, checkGameOver, selectSmartBotMove } from './utils/checkers.js';
-import { Game, Player, Message, Transaction, GameStatus, PlayerColor, MoveCoordinates, Piece, Deposit, WebhookEvent } from './types.js';
-import { UserRepository, DepositRepository, TransactionRepository, WebhookEventRepository } from './db/repositories.js';
+import { Game, Player, Message, Transaction, GameStatus, PlayerColor, MoveCoordinates, Piece, Deposit, WebhookEvent, Withdrawal } from './types.js';
+import { UserRepository, DepositRepository, TransactionRepository, WebhookEventRepository, WithdrawalRepository } from './db/repositories.js';
 import { requireAuth, AuthenticatedRequest, signToken, verifyToken } from './utils/auth.js';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
 
@@ -603,17 +603,46 @@ app.post('/api/users/deposit', async (req, res) => {
 
 // Withdrawal Request (to be paid manually by administrator)
 app.post('/api/users/withdraw', requireAuth, async (req: AuthenticatedRequest, res) => {
-  const { amount, pixKey } = req.body;
-  const numAmount = parseFloat(amount);
+  const { amount, pixKey, pixKeyType } = req.body;
+  
+  // 1. Validate & round amount to two decimal places
+  let numAmount = parseFloat(amount);
   if (isNaN(numAmount) || numAmount <= 0) {
-    return res.status(400).json({ error: 'Quantia de saque inválida' });
+    return res.status(400).json({ error: 'Quantia de saque inválida.' });
   }
+  numAmount = parseFloat(numAmount.toFixed(2));
 
-  const user = await UserRepository.findById(req.userId!);
+  // 2. Validate PIX fields
+  const validPixTypes = ['cpf', 'cnpj', 'email', 'phone', 'random'];
+  if (!pixKey || !pixKeyType || !validPixTypes.includes(String(pixKeyType).toLowerCase())) {
+    return res.status(400).json({ error: 'Chave PIX ou Tipo de Chave PIX inválido.' });
+  }
+  const cleanPixKey = sanitize(pixKey);
+  const cleanPixKeyType = String(pixKeyType).toLowerCase() as any;
+
+  const userId = req.userId!;
+  const user = await UserRepository.findById(userId);
   if (!user) {
     return res.status(401).json({ error: 'Usuário não encontrado.' });
   }
 
+  // 3. Rate limiting check (minimum 1 minute between withdrawal requests)
+  const lastWithdrawal = await WithdrawalRepository.findLastByUserId(userId);
+  if (lastWithdrawal) {
+    const elapsedMs = Date.now() - new Date(lastWithdrawal.createdAt).getTime();
+    if (elapsedMs < 60000) {
+      return res.status(429).json({ error: 'Aguarde 1 minuto entre solicitações de saque.' });
+    }
+  }
+
+  // 4. Validate user has at least one approved deposit
+  const deposits = await DepositRepository.findAllByUserId(userId);
+  const approvedDeposits = deposits.filter(d => d.status === 'approved');
+  if (approvedDeposits.length === 0) {
+    return res.status(400).json({ error: 'Você precisa ter feito pelo menos um depósito via PIX aprovado antes de realizar saques.' });
+  }
+
+  // 5. Check rollover requirements
   const rolloverLeft = (user.rolloverRequired || 0) - (user.rolloverWagered || 0);
   if (rolloverLeft > 0) {
     return res.status(400).json({
@@ -621,27 +650,101 @@ app.post('/api/users/withdraw', requireAuth, async (req: AuthenticatedRequest, r
     });
   }
 
-  if (user.balance < numAmount) {
-    return res.status(400).json({ error: 'Saldo de carteira insuficiente' });
+  // 6. Enforce min/max boundaries
+  if (numAmount < 65.00) {
+    return res.status(400).json({ error: 'O valor mínimo para realizar um saque é R$ 65,00.' });
+  }
+  if (numAmount > 5000.00) {
+    return res.status(400).json({ error: 'O valor máximo permitido por saque é R$ 5.000,00.' });
   }
 
-  user.balance -= numAmount;
-  await UserRepository.save(user);
+  // 7. Prevent multiple pending/processing withdrawals
+  const pendingWithdrawal = await WithdrawalRepository.findPendingByUserId(userId);
+  if (pendingWithdrawal) {
+    return res.status(400).json({ error: 'Você já possui uma solicitação de saque em processamento.' });
+  }
 
-  const destinationPixKey = pixKey ? sanitize(pixKey) : user.email || 'Não informada';
+  // 8. Validate sufficient balance
+  if (user.balance < numAmount) {
+    return res.status(400).json({ error: 'Saldo insuficiente para realizar este saque.' });
+  }
 
-  const tx: Transaction = {
+  // 9. Execute transaction: deduct balance, increase lockedBalance, insert withdrawal, write transaction log
+  const withdrawalId = `with-${crypto.randomBytes(8).toString('hex')}`;
+  const nowStr = new Date().toISOString();
+
+  const newWithdrawal: Withdrawal = {
+    id: withdrawalId,
+    userId,
+    amount: numAmount,
+    pixKey: cleanPixKey,
+    pixKeyType: cleanPixKeyType,
+    status: 'pending',
+    createdAt: nowStr
+  };
+
+  const txLog: Transaction = {
     id: `tx-with-${crypto.randomBytes(4).toString('hex')}`,
-    userId: user.id,
+    userId,
     type: 'withdrawal',
     amount: numAmount,
-    description: `Solicitação de retirada PIX registrada para a chave: ${destinationPixKey} (Valor: R$ ${numAmount.toFixed(2)}). O valor foi deduzido da carteira virtual e o administrador realizará a transferência manualmente.`,
-    createdAt: new Date().toISOString()
+    description: `Solicitação de saque PIX (Ref: ${withdrawalId}, Chave: ${cleanPixKeyType}: ${cleanPixKey}) registrada. Valor de R$ ${numAmount.toFixed(2)} foi debitado do saldo e reservado em saldo bloqueado.`,
+    createdAt: nowStr
   };
-  await TransactionRepository.create(tx);
 
-  const txHistory = await TransactionRepository.findAllByUserId(user.id);
-  res.json({ user, transactions: txHistory });
+  try {
+    await WithdrawalRepository.createWithdrawalTransaction(newWithdrawal, numAmount, numAmount, txLog);
+    console.log(`[ADMIN_LOG] Saque solicitado: Usuário ${user.name} (${user.id}) solicitou R$ ${numAmount.toFixed(2)} via PIX (${cleanPixKeyType}: ${cleanPixKey}). Status: pending.`);
+  } catch (err: any) {
+    console.error('Error executing withdrawal transaction:', err);
+    return res.status(500).json({ error: 'Falha ao processar a solicitação de saque no banco de dados.' });
+  }
+
+  // Retrieve updated user and transactions list
+  const updatedUser = await UserRepository.findById(userId);
+  const txHistory = await TransactionRepository.findAllByUserId(userId);
+  res.json({ success: true, user: updatedUser, transactions: txHistory });
+});
+
+// GET user withdrawals list
+app.get('/api/withdrawals', requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const list = await WithdrawalRepository.findAllByUserId(req.userId!);
+    res.json(list);
+  } catch (err) {
+    console.error('Error fetching user withdrawals:', err);
+    res.status(500).json({ error: 'Erro ao listar solicitações de saque.' });
+  }
+});
+
+// Admin change withdrawal status (e.g. approve/reject/failed/processing/cancelled)
+app.post('/api/admin/withdrawals/status', async (req, res) => {
+  const { withdrawalId, status } = req.body;
+  const allowedStatuses = ['approved', 'rejected', 'failed', 'cancelled', 'processing'];
+  
+  if (!withdrawalId || !status || !allowedStatuses.includes(status)) {
+    return res.status(400).json({ error: 'Parâmetros de atualização inválidos.' });
+  }
+
+  try {
+    const w = await WithdrawalRepository.findById(withdrawalId);
+    if (!w) {
+      return res.status(404).json({ error: 'Solicitação de saque não encontrada.' });
+    }
+
+    if (w.status === 'approved' || w.status === 'rejected' || w.status === 'cancelled' || w.status === 'failed') {
+      return res.status(400).json({ error: 'Esta solicitação de saque já foi finalizada.' });
+    }
+
+    const approvedAt = (status === 'approved' || status === 'rejected' || status === 'failed' || status === 'cancelled') ? new Date().toISOString() : undefined;
+    await WithdrawalRepository.updateWithdrawalStatusTransaction(withdrawalId, status, approvedAt);
+    
+    console.log(`[ADMIN_LOG] Saque atualizado: Registro ${withdrawalId} alterado para status ${status} pelo administrador.`);
+    res.json({ success: true, message: `Status da solicitação de saque atualizado para ${status} com sucesso.` });
+  } catch (err) {
+    console.error('Error updating withdrawal status:', err);
+    res.status(500).json({ error: 'Erro ao processar alteração de status do saque.' });
+  }
 });
 
 // --- NEW MERCADO PAGO PIX ENDPOINTS ---
