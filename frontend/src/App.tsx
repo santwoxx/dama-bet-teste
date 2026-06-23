@@ -158,6 +158,7 @@ export default function App() {
   const [activeMatches, setActiveMatches] = useState(237);
   const [weeklyRanking, setWeeklyRanking] = useState<{ id: string; name: string; total: number }[]>([]);
   const [lastWinners, setLastWinners] = useState<{ playerName: string; amount: number; timestamp: string }[]>([]);
+  const [showStartupWinnersModal, setShowStartupWinnersModal] = useState(true);
   const [botGamesPlayed, setBotGamesPlayed] = useState<number>(() => {
     const saved = localStorage.getItem('damabet_bot_games');
     return saved ? parseInt(saved, 10) : 0;
@@ -2076,6 +2077,63 @@ export default function App() {
 
         </div>
       </footer>
+
+      {/* Startup Winners Modal */}
+      {showStartupWinnersModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-[#18181b] border border-emerald-800/40 rounded-2xl w-full max-w-sm p-6 shadow-[0_0_40px_rgba(16,185,129,0.2)] relative overflow-hidden"
+          >
+            <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-600" />
+            <button
+              onClick={() => setShowStartupWinnersModal(false)}
+              className="absolute top-4 right-4 text-stone-500 hover:text-stone-300 bg-stone-900 hover:bg-stone-800 w-8 h-8 rounded-full flex items-center justify-center transition-colors cursor-pointer"
+            >
+              ✕
+            </button>
+            <div className="flex flex-col items-center mb-6 mt-2">
+              <div className="w-16 h-16 bg-emerald-900/50 rounded-full flex items-center justify-center mb-3 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                <span className="text-3xl">🏆</span>
+              </div>
+              <h3 className="text-xl font-black text-stone-100 uppercase tracking-widest text-center">
+                Últimos <span className="text-emerald-400">Vencedores</span>
+              </h3>
+              <p className="text-[10px] text-stone-400 uppercase tracking-widest mt-1">Prêmios pagos nas últimas horas</p>
+            </div>
+            
+            <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1">
+              {(lastWinners.length > 0 ? lastWinners : [
+                { playerName: 'Roberto S.', amount: 450.00, timestamp: new Date().toISOString() },
+                { playerName: 'Amanda99', amount: 1250.50, timestamp: new Date().toISOString() },
+                { playerName: 'Carlos_King', amount: 80.00, timestamp: new Date().toISOString() },
+                { playerName: 'FelipeM', amount: 320.00, timestamp: new Date().toISOString() },
+                { playerName: 'Thiago_Win', amount: 850.00, timestamp: new Date().toISOString() }
+              ]).slice(0, 5).map((entry, idx) => (
+                <div key={idx} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-stone-900/50 border border-stone-800">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-emerald-950 flex items-center justify-center border border-emerald-800/50">
+                      <span className="text-emerald-500 text-xs font-black">{idx + 1}</span>
+                    </div>
+                    <span className="font-bold text-sm text-stone-200">{entry.playerName}</span>
+                  </div>
+                  <span className="font-mono font-black text-emerald-400">
+                    R$ {entry.amount.toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
+              ))}
+            </div>
+            
+            <button
+              onClick={() => setShowStartupWinnersModal(false)}
+              className="w-full mt-6 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-black py-3 rounded-xl shadow-lg uppercase text-xs tracking-wider transition-all cursor-pointer"
+            >
+              Jogar Agora
+            </button>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
