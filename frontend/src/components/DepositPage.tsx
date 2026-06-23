@@ -132,7 +132,7 @@ export default function DepositPage({ onActionComplete, token }: DepositPageProp
               </p>
 
               <div className="grid grid-cols-3 gap-2 mb-4">
-                {[20, 50, 100].map(val => (
+                {[10, 50, 100].map(val => (
                   <button
                     key={val}
                     onClick={() => setAmount(val)}

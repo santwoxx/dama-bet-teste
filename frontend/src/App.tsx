@@ -1357,11 +1357,11 @@ export default function App() {
                       </label>
                       <div className="grid grid-cols-5 gap-1.5">
                         {[
-                          { value: 5, color: 'from-amber-400 to-amber-600' },
                           { value: 10, color: 'from-amber-400 to-amber-600' },
                           { value: 20, color: 'from-amber-400 to-amber-600' },
                           { value: 50, color: 'from-amber-400 to-amber-600' },
                           { value: 100, color: 'from-amber-400 to-amber-600' },
+                          { value: 250, color: 'from-amber-400 to-amber-600' },
                         ].map(({ value, color }) => (
                           <button
                             key={value}
