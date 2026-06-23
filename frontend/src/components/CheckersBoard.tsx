@@ -51,8 +51,12 @@ function CheckersBoard({
     if (userColor !== 'both' && userColor !== piece.color) return;
     if (piece.color !== turn) return;
     if (mustJumpPieceId && piece.id !== mustJumpPieceId) return;
+    
+    const hasMoves = allValidMoves.some(m => m.from.row === piece.row && m.from.col === piece.col);
+    if (!hasMoves) return;
+
     setSelectedPiece(piece);
-  }, [gameActive, userColor, turn, mustJumpPieceId]);
+  }, [gameActive, userColor, turn, mustJumpPieceId, allValidMoves]);
 
   const handleCellClick = useCallback((row: number, col: number) => {
     const matchedMove = highlightedMoves.find((m) => m.to.row === row && m.to.col === col);
@@ -170,8 +174,8 @@ function CheckersBoard({
                                 ? 'shadow-[0_0_25px_rgba(250,191,24,0.9)] border-[#FABF18] border-2 ring-2 ring-[#FABF18]/30'
                                 : 'cursor-pointer hover:shadow-[0_0_12px_rgba(250,191,24,0.3)]'
                             } ${
-                              mustJumpPieceId && piece.id !== mustJumpPieceId && piece.color === turn
-                                ? 'opacity-40 filter grayscale'
+                              piece.color === turn && !allValidMoves.some(m => m.from.row === piece.row && m.from.col === piece.col)
+                                ? 'opacity-40 filter grayscale cursor-not-allowed'
                                 : ''
                             }`}
                           >
