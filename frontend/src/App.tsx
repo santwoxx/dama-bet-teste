@@ -2043,7 +2043,10 @@ export default function App() {
             </div>
             <div className="text-center space-y-1 max-w-2xl">
               <p className="text-[11px] text-stone-500 font-mono font-bold">
-                Dama Bet
+                NEXUS INTERNATIONAL LTDA — 55.078.134/0001-17
+              </p>
+              <p className="text-[10px] text-stone-600 leading-relaxed">
+                © Dama Bet é operada pela NEXUS INTERNATIONAL LTDA, inscrita no CNPJ nº 55.078.134/0001-17. Apostas e jogos disponíveis apenas para maiores de 18 anos.
               </p>
             </div>
           </div>
