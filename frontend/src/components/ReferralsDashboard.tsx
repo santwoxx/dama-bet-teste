@@ -282,7 +282,7 @@ export default function ReferralsDashboard({
         className="w-full rounded-2xl overflow-hidden border-2 border-[#FABF18]/60 shadow-2xl relative bg-stone-950 flex items-center justify-center"
       >
         <img 
-          src="https://i.ibb.co/jkNfg2x6/Whats-App-Image-2026-06-21-at-19-19-28.jpg" 
+          src="https://i.ibb.co/kg157wLR/Whats-App-Image-2026-06-22-at-23-46-44.jpg" 
           alt="Promoção Indique e Ganhe" 
           className="w-full h-auto object-contain max-h-[320px] sm:max-h-[400px]"
         />
