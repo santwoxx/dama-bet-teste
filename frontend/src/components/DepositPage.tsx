@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Copy, CheckCircle2, QrCode, MessageCircle } from 'lucide-react';
+import { Sparkles, Copy, CheckCircle2, QrCode } from 'lucide-react';
 
 interface DepositPageProps {
   onActionComplete: () => void;
@@ -217,19 +217,7 @@ export default function DepositPage({ onActionComplete, token }: DepositPageProp
               </div>
 
               <div className="w-full border-t border-[#DCD6C2] pt-5 mt-2 space-y-3">
-                <p className="text-[11px] text-stone-600 font-bold mb-3">
-                  Após realizar o pagamento, envie o comprovante no suporte para liberação imediata do seu saldo.
-                </p>
-                
-                <a
-                  href={`https://wa.me/5511999999999?text=Olá, acabei de realizar um depósito via PIX no valor de R$ ${amount} na Dama Bet. Gostaria de enviar meu comprovante!`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full bg-[#25D366] hover:bg-[#1DA851] text-white font-black py-3.5 px-4 rounded-xl shadow-[0_4px_14px_rgba(37,211,102,0.4)] uppercase text-[11px] tracking-wider cursor-pointer active:scale-95 transition-all flex items-center justify-center gap-2"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  ENVIAR COMPROVANTE (WHATSAPP)
-                </a>
+
 
                 <button
                   onClick={() => {
