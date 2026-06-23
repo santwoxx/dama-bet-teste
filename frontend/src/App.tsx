@@ -634,6 +634,35 @@ export default function App() {
     }
   };
 
+  // Actions trigger: CREATE DEMO BOT GAME
+  const handleCreateDemoGame = async () => {
+    setLobbyError('');
+    if (!player) return;
+
+    setCreateLoading(true);
+    try {
+      const response = await fetch('/api/games/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hostId: userId, betAmount: 0, isBotGame: true, botGamesPlayed }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao inicializar');
+      }
+
+      setActiveGameId(data.game.id);
+      setActiveGame(data.game);
+      setCurrentView('game');
+      fetchProfile(userId);
+    } catch (err: any) {
+      setLobbyError(err.message || 'Houve um erro.');
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   // Actions trigger: CREATE BOT GAME
   const handleCreateGame = async () => {
     setLobbyError('');
@@ -1351,7 +1380,7 @@ export default function App() {
                     </div>
 
                     {/* Tigrinho-style Main Action Button */}
-                    <div className="pt-2">
+                    <div className="pt-2 flex flex-col gap-2.5">
                       <button
                         id="btn-paciencia-launch-bot"
                         onClick={handleCreateGame}
@@ -1371,6 +1400,14 @@ export default function App() {
                             <Sparkles className="w-4 h-4 group-hover:animate-spin" />
                           </>
                         )}
+                      </button>
+
+                      <button
+                        onClick={handleCreateDemoGame}
+                        disabled={createLoading}
+                        className="w-full bg-[#1c1917] hover:bg-[#292524] border border-stone-700 text-stone-300 font-bold py-3 px-4 rounded-lg uppercase tracking-widest text-xs cursor-pointer active:scale-95 transition-all flex justify-center items-center shadow-inner"
+                      >
+                        Modo Demo (Teste Grátis)
                       </button>
                     </div>
 
