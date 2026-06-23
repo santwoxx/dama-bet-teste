@@ -157,7 +157,15 @@ export default function App() {
   const [onlinePlayers, setOnlinePlayers] = useState(842);
   const [activeMatches, setActiveMatches] = useState(237);
   const [weeklyRanking, setWeeklyRanking] = useState<{ id: string; name: string; total: number }[]>([]);
-  const [lastWinners, setLastWinners] = useState<{ playerName: string; amount: number; timestamp: string }[]>([]);
+  const [lastWinners, setLastWinners] = useState<{ playerName: string; amount: number; timestamp: string }[]>(() => {
+    const fakeNames = ['Lucas77', 'MatheusBR', 'Kaio99', 'Gabriel22', 'Rafa2025', 'Gustavo01', 'Kauan09', 'Ana2020', 'ThiagoWin', 'PedroX10', 'MariGamer', 'Bella99'];
+    const values = [10, 15, 20, 50, 80, 100, 150, 250, 500];
+    return Array.from({ length: 15 }).map(() => ({
+      playerName: fakeNames[Math.floor(Math.random() * fakeNames.length)],
+      amount: values[Math.floor(Math.random() * values.length)],
+      timestamp: new Date(Date.now() - Math.random() * 600000).toISOString()
+    }));
+  });
   const [showStartupWinnersModal, setShowStartupWinnersModal] = useState(true);
   const [botGamesPlayed, setBotGamesPlayed] = useState<number>(() => {
     const saved = localStorage.getItem('damabet_bot_games');
@@ -231,7 +239,7 @@ export default function App() {
     }, 45000);
 
     const fakeWinInt = setInterval(() => {
-      const values = [5, 10, 15, 20, 25, 50];
+      const values = [10, 15, 20, 25, 50, 80, 100, 150, 250, 500];
       setLastWinners((prev) => {
         const next = [{
           playerName: fakeNames[Math.floor(Math.random() * fakeNames.length)],
@@ -240,7 +248,7 @@ export default function App() {
         }, ...prev];
         return next.slice(0, 50);
       });
-    }, 45000);
+    }, 4500);
 
     return () => {
       clearInterval(statsInt);
