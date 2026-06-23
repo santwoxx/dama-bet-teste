@@ -59,8 +59,8 @@ export default function DepositPage({ onActionComplete, token }: DepositPageProp
   const [step, setStep] = useState<'input' | 'payment'>('input');
 
   const handleGeneratePix = async () => {
-    if (!amount || amount < 5) {
-      setError('O valor mínimo de depósito é R$ 5,00.');
+    if (!amount || amount < 10) {
+      setError('O valor mínimo de depósito é R$ 10,00.');
       return;
     }
 
@@ -128,7 +128,7 @@ export default function DepositPage({ onActionComplete, token }: DepositPageProp
               className="space-y-4 mt-4"
             >
               <p className="text-stone-600 text-xs font-medium leading-relaxed">
-                Insira o valor que deseja depositar para gerar o QR Code. (Mínimo R$ 5,00)
+                Insira o valor que deseja depositar para gerar o QR Code. (Mínimo R$ 10,00)
               </p>
 
               <div className="grid grid-cols-3 gap-2 mb-4">
@@ -147,7 +147,7 @@ export default function DepositPage({ onActionComplete, token }: DepositPageProp
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500 font-bold">R$</span>
                 <input
                   type="number"
-                  min="5"
+                  min="10"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value ? Number(e.target.value) : '')}
                   placeholder="0,00"
