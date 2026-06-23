@@ -2031,11 +2031,14 @@ export default function App() {
           {/* Certificates & Regulatory Info */}
           <div className="flex flex-col items-center gap-4 w-full">
             <div className="flex flex-wrap items-center justify-center gap-4">
-              <a href="https://ibb.co/nMPTXGwR" target="_blank" rel="noopener noreferrer">
-                <img src="https://i.ibb.co/b5bx4067/Whats-App-Image-2026-06-20-at-01-58-36.jpg" alt="Certificado 1" className="h-20 sm:h-24 rounded border border-stone-700" />
+              <a href="https://imgbb.com/">
+                <img src="https://i.ibb.co/W4jbFsBw/autorizado.webp" alt="autorizado" border={0} className="h-20 sm:h-24 rounded border border-stone-700" />
               </a>
-              <a href="https://ibb.co/99rCgyJz" target="_blank" rel="noopener noreferrer">
-                <img src="https://i.ibb.co/xS7RLzyP/Whats-App-Image-2026-06-20-at-01-58-33.jpg" alt="Certificado 2" className="h-20 sm:h-24 rounded border border-stone-700" />
+              <a href="https://imgbb.com/">
+                <img src="https://i.ibb.co/2zRxcTw/pix.webp" alt="pix" border={0} className="h-20 sm:h-24 rounded border border-stone-700" />
+              </a>
+              <a href="https://imgbb.com/">
+                <img src="https://i.ibb.co/ym1v2JsP/ba9a415d-6529-4b81-b5ca-d53017bd3087.webp" alt="ba9a415d-6529-4b81-b5ca-d53017bd3087" border={0} className="h-20 sm:h-24 rounded border border-stone-700" />
               </a>
             </div>
             <div className="text-center space-y-1 max-w-2xl">
