@@ -150,19 +150,7 @@ export default function Header({ player, transactions, onActionComplete, onRefre
                 <span className="font-extrabold text-[#142c23]">?</span> AJUDA
               </button>
               
-              <button
-                id="btn-paciencia-new"
-                onClick={() => {
-                  if (onRefreshGame) {
-                    onRefreshGame();
-                  } else {
-                    window.location.reload();
-                  }
-                }}
-                className="bg-gradient-to-r from-[#FABF18] to-[#d97706] hover:from-[#f59e0b] hover:to-[#b45309] text-[#142c23] font-extrabold text-xs px-2.5 py-1.5 sm:px-3 sm:py-2 rounded flex items-center gap-1 uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-sm font-sans relative overflow-hidden btn-shimmer"
-              >
-                + NOVO
-              </button>
+
 
               <button
                 id="btn-paciencia-settings"
