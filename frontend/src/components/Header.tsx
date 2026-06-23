@@ -418,7 +418,12 @@ export default function Header({ player, transactions, onActionComplete, onRefre
                 {modalType === 'deposit' ? (
                   <p className="text-[10.5px] text-stone-400">O depósito via PIX do Mercado Pago será creditado na sua conta automaticamente.</p>
                 ) : (
-                  <p className="text-[10.5px] text-[#FABF18] font-medium">A solicitação de saque será enviada. O administrador processará a transferência manual via PIX em breve (Limite Mínimo R$ 65,00).</p>
+                  <div className="space-y-1">
+                    <p className="text-[10.5px] text-[#FABF18] font-medium">A solicitação de saque será enviada. O administrador processará a transferência manual via PIX em breve (Limite Mínimo R$ 65,00).</p>
+                    <p className="text-[10px] text-rose-400 font-bold uppercase tracking-wider bg-rose-950/30 p-1.5 rounded border border-rose-900/50 mt-1">
+                      ⚠️ Atenção: Por segurança, o resgate de saldo/bônus será enviado exclusivamente para a MESMA CHAVE PIX (mesmo titular) utilizada no depósito.
+                    </p>
+                  </div>
                 )}
               </div>
 
