@@ -2043,10 +2043,7 @@ export default function App() {
             </div>
             <div className="text-center space-y-1 max-w-2xl">
               <p className="text-[11px] text-stone-500 font-mono font-bold">
-                NEXUS INTERNATIONAL LTDA — 55.078.134/0001-17
-              </p>
-              <p className="text-[10px] text-stone-600 leading-relaxed">
-                © Betão (Betao) é operado pela OIG Gaming Brazil LTDA, inscrita no CNPJ Nº 55.459.453/0001-72. OIG Gaming é autorizada pela Portaria SPA/MF Nº 2.096, de 30 de Dezembro de 2024. Apostas e jogos disponíveis apenas para maiores de 18 anos.
+                Dama Bet
               </p>
             </div>
           </div>
