@@ -118,7 +118,7 @@ export default function Header({ player, transactions, onActionComplete, onRefre
 
   return (
     <div className="w-full select-none" id="paciencia-header">
-      {/* Real Top Header Bar - Tigrinho Enhanced */}
+      {/* Real Top Header Bar - Premium Enhanced */}
       <header className="bg-gradient-to-r from-[#143d22] via-[#102d19] to-[#07190e] text-stone-100 py-2 px-2 sm:py-2.5 sm:px-4 shadow-lg relative"
         style={{
           borderBottom: '2px solid',
@@ -140,7 +140,7 @@ export default function Header({ player, transactions, onActionComplete, onRefre
               </span>
             </div>
 
-            {/* Yellow button actions - Tigrinho Enhanced */}
+            {/* Yellow button actions - Premium Enhanced */}
             <div className="flex items-center gap-1.5 ml-2">
               <button
                 id="btn-paciencia-help"
@@ -176,7 +176,7 @@ export default function Header({ player, transactions, onActionComplete, onRefre
               </button>
             </div>
 
-            {/* Live Wallet Balance - Tigrinho Glow */}
+            {/* Live Wallet Balance - Premium Glow */}
             <div className="flex items-center gap-1 sm:gap-2 bg-[#1b4335]/70 px-2 sm:px-3 py-1 sm:py-1.5 rounded border border-[#FABF18]/45 text-stone-100 shadow-lg pulse-ring">
               <div className="flex flex-col items-start leading-none">
                 {player.bonusBalance && player.bonusBalance > 0 ? (
@@ -440,7 +440,7 @@ export default function Header({ player, transactions, onActionComplete, onRefre
         </div>
       )}
 
-      {/* DAMA.BET Help Modal - Tigrinho Enhanced */}
+      {/* DAMA.BET Help Modal - Premium Enhanced */}
       {showHelpModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 animate-fade-in text-stone-100">
           <motion.div

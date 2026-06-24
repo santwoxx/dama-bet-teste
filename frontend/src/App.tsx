@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import DepositPage from './components/DepositPage';
 import AdminDashboard from './components/AdminDashboard';
 
-// ─── Sparkle Background Overlay (Tigrinho Style) ─────────────────────
+// ─── Sparkle Background Overlay (Premium Style) ─────────────────────
 const SparkleBg = React.memo(function SparkleBg({ density = 15, className = '' }: { density?: number; className?: string }) {
   const sparkles = React.useMemo(() => {
     const h = typeof window !== 'undefined' ? window.innerHeight : 600;
@@ -1248,7 +1248,7 @@ export default function App() {
 
               {lobbyTab === 'play' ? (
                 <>
-                  {/* Copa do Mundo 2026 Promo Banner - Tigrinho Enhanced */}
+                  {/* Copa do Mundo 2026 Promo Banner - Premium Enhanced */}
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1311,7 +1311,7 @@ export default function App() {
 
                   <div className="flex flex-col md:flex-row items-center justify-center gap-8 w-full max-w-4xl relative z-10">
                 
-                {/* Premium Tigrinho Customizer Card */}
+                {/* Premium Premium Customizer Card */}
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -1350,7 +1350,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Tigrinho-style Bet Chips with Icons */}
+                    {/* Premium-style Bet Chips with Icons */}
                     <div>
                       <label className="block text-[11px] font-black uppercase text-[#6B5A4D] tracking-wider mb-1.5">
                         VALOR DA APOSTA
@@ -1379,7 +1379,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Tigrinho-style Main Action Button */}
+                    {/* Premium-style Main Action Button */}
                     <div className="pt-2 flex flex-col gap-2.5">
                       <button
                         id="btn-paciencia-launch-bot"

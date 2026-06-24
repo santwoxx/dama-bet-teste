@@ -125,7 +125,7 @@ function CheckersBoard({
         </div>
       )}
 
-      {/* 8x8 Grid Container - Tigrinho Golden Border */}
+      {/* 8x8 Grid Container - Premium Golden Border */}
       <div className="relative p-0 bg-[#050505] rounded-sm w-full max-w-[580px] max-sm:max-w-[96vw] mx-auto aspect-square shadow-[0_0_30px_rgba(250,191,24,0.15)] touch-none select-none [-webkit-tap-highlight-color:transparent]"
         style={{
           border: '6px solid',
@@ -211,7 +211,7 @@ function CheckersBoard({
                         )}
                       </AnimatePresence>
 
-                      {/* Highlighted Movement Indicator - Tigrinho Enhanced */}
+                      {/* Highlighted Movement Indicator - Premium Enhanced */}
                       {isCellHighlighted && (
                         <div className="absolute inset-0 z-15 flex items-center justify-center bg-amber-500/15 hover:bg-amber-500/25 active:scale-95 backdrop-brightness-110">
                           {/* Inner pulsating target ring with golden glow */}

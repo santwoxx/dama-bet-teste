@@ -291,7 +291,7 @@ export default function ReferralsDashboard({
         </div>
       </motion.div>
 
-      {/* 1. ULTRA PREMIUM AFFILIATE BANNER - Tigrinho Enhanced */}
+      {/* 1. ULTRA PREMIUM AFFILIATE BANNER - Premium Enhanced */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -372,7 +372,7 @@ export default function ReferralsDashboard({
               <Share2 className="w-5 h-5 text-[#FABF18]" />
             </div>
             <div>
-              <h3 className="font-black text-sm uppercase text-[#FABF18] tracking-wide">CONVITE VIP DO TIGRINHO</h3>
+              <h3 className="font-black text-sm uppercase text-[#FABF18] tracking-wide">CONVITE VIP DO DAMA BET</h3>
               <p className="text-[10px] text-stone-400">Compartilhe seu link e lucre com a rede</p>
             </div>
           </div>
@@ -407,7 +407,7 @@ export default function ReferralsDashboard({
           </div>
         </div>
 
-        {/* Right Side: Interactive Commission / Bonus Simulator - Tigrinho */}
+        {/* Right Side: Interactive Commission / Bonus Simulator - Premium */}
         <div className="bg-gradient-to-b from-[#143d22] to-[#081e10] border-2 border-[#FABF18] text-white p-5 rounded-2xl shadow-xl flex flex-col justify-between card-glow relative overflow-hidden">
           <motion.div
             className="absolute -top-8 -right-8 w-24 h-24 bg-[#FABF18]/8 rounded-full blur-2xl"
