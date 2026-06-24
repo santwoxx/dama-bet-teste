@@ -77,41 +77,53 @@ function CheckersBoard({
 
   return (
     <div className="flex flex-col items-center">
-      {/* Turn indicator and mandatory jumps alerts */}
-      <div className="mb-4 w-full flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#0a0a0a] p-3 rounded-sm border border-stone-800">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-stone-400">Vez de jogar:</span>
-          <div className="flex items-center gap-2">
-            <span
-              className={`w-3 h-3 rounded-full inline-block shrink-0 ${
-                turn === 'red' ? 'bg-[#b91c1c] shadow-[0_0_8px_rgba(185,28,28,0.7)]' : 'bg-stone-300 shadow-[0_0_8px_rgba(255,255,255,0.4)]'
-              }`}
-            />
-            <span className="text-xs font-bold font-mono uppercase text-stone-200">
-              {turn === 'red' ? 'Vermelhas' : 'Pretas'}
-            </span>
-            {isUserTurn && gameActive && (
-              <span className="text-[10px] bg-amber-500/10 text-amber-500 px-2.5 py-0.5 rounded-sm border border-amber-500/20 font-bold">
-                SEU TURNO
+      {/* Enhanced Turn indicator and mandatory jumps alerts */}
+      {gameActive ? (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={turn + isUserTurn.toString()}
+            initial={{ scale: 0.95, opacity: 0, y: -10 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 10 }}
+            className={`mb-6 w-full flex flex-col items-center justify-center p-4 sm:p-5 rounded-lg border-2 ${
+              isUserTurn
+                ? 'bg-gradient-to-r from-amber-600/10 via-amber-500/20 to-amber-600/10 border-amber-500 shadow-[0_0_30px_rgba(245,158,11,0.25)]'
+                : 'bg-stone-900 border-stone-700 shadow-xl'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <span
+                className={`w-5 h-5 rounded-full inline-block shrink-0 border-2 border-white/20 ${
+                  turn === 'red' ? 'bg-[#b91c1c] shadow-[0_0_15px_rgba(185,28,28,0.8)]' : 'bg-stone-300 shadow-[0_0_15px_rgba(255,255,255,0.6)]'
+                }`}
+              />
+              <span className={`text-2xl sm:text-3xl font-black uppercase tracking-widest ${isUserTurn ? 'text-amber-400 drop-shadow-[0_0_10px_rgba(245,158,11,0.6)]' : 'text-stone-300'}`}>
+                {userColor === 'both' ? `Vez das ${turn === 'red' ? 'Vermelhas' : 'Pretas'}` : isUserTurn ? 'Sua Vez!' : 'Vez do Oponente'}
               </span>
+            </div>
+
+            {(mustJumpPieceId || allValidMoves.some((m) => m.isJump)) && (
+              <div className="flex gap-3 mt-3">
+                {mustJumpPieceId ? (
+                  <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-400 bg-amber-500/10 border border-amber-500/40 px-4 py-1.5 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                    <BadgeAlert className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 animate-pulse" />
+                    <span className="font-bold uppercase tracking-wider">Continue a captura!</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-xs sm:text-sm text-red-400 bg-red-500/10 border border-red-500/40 px-4 py-1.5 rounded-full shadow-[0_0_10px_rgba(239,68,68,0.2)]">
+                    <BadgeAlert className="w-4 h-4 sm:w-5 sm:h-5 text-red-400 animate-pulse" />
+                    <span className="font-bold uppercase tracking-wider">Captura Obrigatória!</span>
+                  </div>
+                )}
+              </div>
             )}
-          </div>
+          </motion.div>
+        </AnimatePresence>
+      ) : (
+        <div className="mb-4 w-full flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#0a0a0a] p-3 rounded-sm border border-stone-800">
+          <span className="text-stone-400 font-medium">Aguardando início da partida...</span>
         </div>
-
-        {mustJumpPieceId && (
-          <div className="flex items-center gap-1.5 text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-sm">
-            <BadgeAlert className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-            <span className="font-medium">Mandatório concluir captura dupla!</span>
-          </div>
-        )}
-
-        {gameActive && allValidMoves.some((m) => m.isJump) && (
-          <div className="flex items-center gap-1.5 text-[10px] text-amber-550 bg-amber-500/5 border border-amber-500/20 px-2.5 py-1 rounded-sm">
-            <Crown className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
-            <span className="font-semibold">Captura obrigatória ativa!</span>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* 8x8 Grid Container - Tigrinho Golden Border */}
       <div className="relative p-0 bg-[#050505] rounded-sm w-full max-w-[580px] max-sm:max-w-[90vw] aspect-square shadow-[0_0_30px_rgba(250,191,24,0.15)]"
@@ -168,7 +180,7 @@ function CheckersBoard({
                             className={`relative w-4/5 h-4/5 rounded-full flex items-center justify-center shadow-xl transition-all duration-200 ${
                               piece.color === 'red'
                                 ? 'bg-gradient-to-br from-[#9a1c1c] via-[#b91c1c] to-[#450a0a] border-2 border-[#f87171]/40'
-                                : 'bg-gradient-to-br from-[#1a1a1a] via-[#111111] to-[#050505] border-2 border-stone-600/50'
+                                : 'bg-gradient-to-br from-[#525252] via-[#262626] to-[#0a0a0a] border-[2.5px] border-stone-400/90 shadow-[0_4px_12px_rgba(0,0,0,0.8)]'
                             } ${
                               isCellSelected
                                 ? 'shadow-[0_0_25px_rgba(250,191,24,0.9)] border-[#FABF18] border-2 ring-2 ring-[#FABF18]/30'
