@@ -126,7 +126,7 @@ function CheckersBoard({
       )}
 
       {/* 8x8 Grid Container - Tigrinho Golden Border */}
-      <div className="relative p-0 bg-[#050505] rounded-sm w-full max-w-[580px] max-sm:max-w-[90vw] aspect-square shadow-[0_0_30px_rgba(250,191,24,0.15)]"
+      <div className="relative p-0 bg-[#050505] rounded-sm w-full max-w-[580px] max-sm:max-w-[96vw] mx-auto aspect-square shadow-[0_0_30px_rgba(250,191,24,0.15)] touch-none select-none [-webkit-tap-highlight-color:transparent]"
         style={{
           border: '6px solid',
           borderImage: 'linear-gradient(135deg, #FABF18, #d97706, #FABF18, #f59e0b) 1',
