@@ -1119,11 +1119,6 @@ export default function App() {
           <div className="w-full flex justify-center">
             <img src="https://i.ibb.co/r2sTdfJb/image.png" alt="Top Ad" loading="lazy" decoding="async" className="w-full max-w-[1200px] h-auto rounded-xl shadow-[0_0_20px_rgba(250,191,24,0.3)] border border-[#FABF18]/30" />
           </div>
-
-          {/* Banner Meio (1080x192) */}
-          <div className="w-full flex justify-center">
-            <img src="https://i.ibb.co/cXSwHvGK/image.png" alt="Middle Ad" loading="lazy" decoding="async" className="w-full max-w-[1080px] h-auto rounded-xl shadow-[0_0_15px_rgba(250,191,24,0.2)] border border-[#FABF18]/20" />
-          </div>
         </div>
       )}
 
@@ -2100,6 +2095,13 @@ export default function App() {
 
         </div>
       </section>
+
+      {/* Banner Fim de Página (1080x192) */}
+      {currentView !== 'game' && (
+        <div className="w-full flex justify-center py-6 bg-[#0a0a0a] px-4">
+          <img src="https://i.ibb.co/cXSwHvGK/image.png" alt="Bottom Ad" loading="lazy" decoding="async" className="w-full max-w-[1080px] h-auto rounded-xl shadow-[0_0_15px_rgba(250,191,24,0.2)] border border-[#FABF18]/20" />
+        </div>
+      )}
 
       {/* SECTION 3: DARK SOLID WOOD FOOTER WITH FLAGS & LABELS */}
       <footer className="bg-[#1C120D] text-stone-400 py-8 px-6 text-xs sm:text-sm border-t border-stone-900 font-sans">
