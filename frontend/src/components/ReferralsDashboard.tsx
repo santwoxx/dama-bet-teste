@@ -372,7 +372,7 @@ export default function ReferralsDashboard({
               <Share2 className="w-5 h-5 text-[#FABF18]" />
             </div>
             <div>
-              <h3 className="font-black text-sm uppercase text-[#FABF18] tracking-wide">CONVITE VIP DO DAMA BET</h3>
+              <h3 className="font-black text-sm uppercase text-[#FABF18] tracking-wide">LINK DE CONVITE DAMA BET</h3>
               <p className="text-[10px] text-stone-400">Compartilhe seu link e lucre com a rede</p>
             </div>
           </div>
