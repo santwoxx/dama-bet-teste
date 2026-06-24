@@ -1107,8 +1107,27 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-stone-100 flex flex-col font-sans select-none antialiased selection:bg-amber-500/30 selection:text-white relative">
+      {/* Banners Laterais */}
+      <div className="hidden 2xl:block fixed left-4 top-1/2 -translate-y-1/2 z-40 w-[240px]">
+        <img src="https://i.ibb.co/hR1srq3S/image.png" alt="Side Ad" className="w-full h-auto rounded-xl shadow-[0_0_20px_rgba(250,191,24,0.3)] border border-[#FABF18]/30" />
+      </div>
+      <div className="hidden 2xl:block fixed right-4 top-1/2 -translate-y-1/2 z-40 w-[240px]">
+        <img src="https://i.ibb.co/hR1srq3S/image.png" alt="Side Ad" className="w-full h-auto rounded-xl shadow-[0_0_20px_rgba(250,191,24,0.3)] border border-[#FABF18]/30" />
+      </div>
+
       <SparkleBg density={currentView === 'game' ? 2 : 8} />
       {currentView !== 'game' && <FortuneParticles />}
+
+      {/* Banner Topo */}
+      <div className="w-full flex justify-center mt-6 px-4 relative z-30">
+        <img src="https://i.ibb.co/r2sTdfJb/image.png" alt="Top Ad" className="w-full max-w-[1200px] h-auto rounded-xl shadow-[0_0_20px_rgba(250,191,24,0.3)] border border-[#FABF18]/30" />
+      </div>
+
+      {/* Banner Meio (1080x192) */}
+      <div className="w-full flex justify-center mt-4 px-4 relative z-30">
+        <img src="https://i.ibb.co/cXSwHvGK/image.png" alt="Middle Ad" className="w-full max-w-[1080px] h-auto rounded-xl shadow-[0_0_15px_rgba(250,191,24,0.2)] border border-[#FABF18]/20" />
+      </div>
+
       {player && (
         <Header 
           player={player} 

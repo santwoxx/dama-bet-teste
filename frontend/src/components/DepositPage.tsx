@@ -99,21 +99,20 @@ export default function DepositPage({ onActionComplete, token }: DepositPageProp
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-[#FAF8EB] text-[#4A3B32] border-2 border-[#DCD6C2] rounded-2xl p-6 sm:p-8 shadow-2xl relative text-center overflow-hidden"
+        className="bg-gradient-to-b from-[#1c1917] to-[#0d0c0b] border border-[#FABF18]/30 rounded-2xl p-6 sm:p-8 shadow-2xl relative text-center overflow-hidden"
       >
-        <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#FABF18] via-[#f59e0b] to-[#FABF18] rounded-t-xl" />
-        <div className="absolute top-2 left-2 w-6 h-6 border-t-2 border-l-2 border-[#FABF18]/30 rounded-tl" />
-        <div className="absolute top-2 right-2 w-6 h-6 border-t-2 border-r-2 border-[#FABF18]/30 rounded-tr" />
-        <div className="absolute bottom-2 left-2 w-6 h-6 border-b-2 border-l-2 border-[#FABF18]/30 rounded-bl" />
-        <div className="absolute bottom-2 right-2 w-6 h-6 border-b-2 border-r-2 border-[#FABF18]/30 rounded-br" />
+        {/* Glow effects */}
+        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-500 via-[#FABF18] to-emerald-500 opacity-70" />
+        <div className="absolute -top-20 -right-20 w-64 h-64 bg-[#FABF18]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <h2 className="text-xl font-black uppercase text-[#4A3B32] tracking-wider mb-2 flex items-center justify-center gap-2">
+        <h2 className="text-2xl font-black uppercase text-white tracking-wider mb-3 flex items-center justify-center gap-2 relative z-10">
           <span>⚡ Depositar via PIX</span>
-          <Sparkles className="w-5 h-5 text-amber-500 animate-pulse" />
+          <Sparkles className="w-6 h-6 text-[#FABF18] animate-pulse" />
         </h2>
         
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded mb-4 text-xs font-bold text-center">
+          <div className="bg-red-950/50 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg mb-5 text-xs font-bold text-center shadow-inner">
             {error}
           </div>
         )}
@@ -125,46 +124,46 @@ export default function DepositPage({ onActionComplete, token }: DepositPageProp
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
-              className="space-y-4 mt-4"
+              className="space-y-5 mt-4 relative z-10"
             >
-              <p className="text-stone-600 text-xs font-medium leading-relaxed">
+              <p className="text-stone-400 text-xs font-medium leading-relaxed">
                 Insira o valor que deseja depositar para gerar o QR Code. (Mínimo R$ 10,00)
               </p>
 
-              <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="grid grid-cols-3 gap-3 mb-5">
                 {[10, 50, 100].map(val => (
                   <button
                     key={val}
                     onClick={() => setAmount(val)}
-                    className="bg-[#EFEAD8] hover:bg-[#FABF18]/20 border border-[#DCD6C2] hover:border-[#FABF18] text-[#5C4033] font-black py-2 rounded transition-all text-sm cursor-pointer"
+                    className="bg-stone-900/50 hover:bg-[#FABF18]/10 border border-stone-800 hover:border-[#FABF18]/50 text-stone-300 hover:text-[#FABF18] font-black py-3 rounded-xl transition-all text-sm cursor-pointer shadow-sm hover:shadow-[0_0_15px_rgba(250,191,24,0.15)]"
                   >
                     R$ {val}
                   </button>
                 ))}
               </div>
 
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500 font-bold">R$</span>
+              <div className="relative group">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#FABF18] font-black text-lg">R$</span>
                 <input
                   type="number"
                   min="10"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value ? Number(e.target.value) : '')}
                   placeholder="0,00"
-                  className="w-full bg-white border border-[#DCD6C2] rounded-lg py-3 pl-10 pr-4 text-[#4A3B32] font-bold outline-none focus:border-[#FABF18] focus:ring-2 focus:ring-[#FABF18]/20 transition-all"
+                  className="w-full bg-black/40 border-2 border-stone-800 rounded-xl py-4 pl-12 pr-4 text-white font-black text-xl outline-none focus:border-[#FABF18] focus:ring-4 focus:ring-[#FABF18]/10 transition-all placeholder:text-stone-700 shadow-inner"
                 />
               </div>
 
               <button
                 onClick={handleGeneratePix}
                 disabled={loading}
-                className="w-full mt-4 bg-gradient-to-r from-[#FABF18] via-[#d97706] to-[#FABF18] text-[#142c23] font-black py-4 px-4 rounded-xl shadow-lg uppercase text-xs tracking-wider cursor-pointer active:scale-95 transition-all flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(250,191,24,0.4)] disabled:opacity-70"
+                className="w-full mt-6 bg-gradient-to-r from-[#FABF18] via-amber-500 to-[#FABF18] text-stone-950 font-black py-4 px-4 rounded-xl shadow-lg uppercase text-sm tracking-widest cursor-pointer active:scale-95 transition-all flex items-center justify-center gap-2 hover:shadow-[0_0_25px_rgba(250,191,24,0.3)] disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {loading ? (
-                  <div className="w-5 h-5 border-2 border-[#142c23] border-t-transparent rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-stone-950 border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <QrCode className="w-4 h-4" />
+                    <QrCode className="w-5 h-5" />
                     GERAR PIX
                   </>
                 )}
@@ -178,55 +177,53 @@ export default function DepositPage({ onActionComplete, token }: DepositPageProp
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
-              className="flex flex-col items-center space-y-5 mt-4"
+              className="flex flex-col items-center space-y-6 mt-4 relative z-10"
             >
-              <div className="w-full bg-[#142c23] text-stone-100 p-3 rounded-lg flex items-center justify-between shadow-md">
-                <span className="text-xs font-bold uppercase tracking-wider text-stone-300">Valor a pagar</span>
-                <span className="text-lg font-black text-[#FABF18]">R$ {Number(amount).toFixed(2).replace('.', ',')}</span>
+              <div className="w-full bg-[#142c23]/60 border border-emerald-900/50 text-stone-100 p-4 rounded-xl flex items-center justify-between shadow-inner">
+                <span className="text-xs font-black uppercase tracking-widest text-emerald-400">Valor a pagar</span>
+                <span className="text-2xl font-black text-[#FABF18] drop-shadow-md">R$ {Number(amount).toFixed(2).replace('.', ',')}</span>
               </div>
 
-              <div className="bg-white p-3 rounded-xl shadow-inner border border-stone-200 relative group">
-                <div className="absolute inset-0 border-4 border-[#FABF18] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+              <div className="bg-white p-4 rounded-2xl shadow-2xl border-4 border-stone-800 relative group overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-tr from-[#FABF18]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                 <img 
                   src={pixData.qrCodeUrl} 
                   alt="QR Code PIX"
-                  className="w-48 h-48 sm:w-56 sm:h-56 object-contain"
+                  className="w-48 h-48 sm:w-56 sm:h-56 object-contain mix-blend-multiply"
                 />
               </div>
               
-              <div className="w-full">
-                <p className="text-[10px] font-black uppercase text-[#999] mb-1.5 text-left flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
+              <div className="w-full space-y-2">
+                <p className="text-[10px] font-black uppercase text-stone-400 text-left flex items-center gap-2">
+                  <span className="w-2 h-2 bg-[#FABF18] rounded-full animate-pulse shadow-[0_0_8px_rgba(250,191,24,0.8)]" />
                   PIX Copia e Cola
                 </p>
-                <div className="flex bg-white border border-[#DCD6C2] rounded-lg overflow-hidden relative group shadow-sm">
+                <div className="flex bg-black/50 border border-stone-700 rounded-xl overflow-hidden relative group shadow-inner focus-within:border-[#FABF18] transition-colors">
                   <input 
                     type="text" 
                     readOnly 
                     value={pixData.qrCode} 
-                    className="w-full bg-transparent text-[10px] sm:text-xs text-stone-600 p-3 outline-none"
+                    className="w-full bg-transparent text-xs text-stone-300 p-4 outline-none font-mono"
                   />
                   <button 
                     onClick={copyToClipboard}
-                    className="bg-[#EFEAD8] hover:bg-[#FABF18] border-l border-[#DCD6C2] px-4 flex items-center justify-center transition-colors text-[#5C4033] hover:text-[#142c23] cursor-pointer shrink-0"
+                    className="bg-stone-800 hover:bg-[#FABF18] border-l border-stone-700 px-5 flex items-center justify-center transition-colors text-stone-300 hover:text-stone-950 cursor-pointer shrink-0"
                     title="Copiar código PIX"
                   >
-                    {copied ? <CheckCircle2 className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {copied ? <CheckCircle2 className="w-5 h-5 text-emerald-500 group-hover:text-stone-950" /> : <Copy className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
 
-              <div className="w-full border-t border-[#DCD6C2] pt-5 mt-2 space-y-3">
-
-
+              <div className="w-full pt-4 mt-2 border-t border-stone-800/50">
                 <button
                   onClick={() => {
                     setPixData(null);
                     setStep('input');
                   }}
-                  className="text-stone-500 hover:text-stone-700 text-[10px] font-bold uppercase tracking-widest underline cursor-pointer mt-4"
+                  className="text-stone-500 hover:text-[#FABF18] text-xs font-black uppercase tracking-widest cursor-pointer transition-colors"
                 >
-                  Fazer novo depósito / Voltar
+                  ← Fazer novo depósito
                 </button>
               </div>
             </motion.div>
