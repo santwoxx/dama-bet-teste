@@ -1107,17 +1107,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-stone-100 flex flex-col font-sans select-none antialiased selection:bg-amber-500/30 selection:text-white relative">
-      {/* Banners Laterais (Só no Lobby) */}
-      {currentView !== 'game' && (
-        <>
-          <div className="hidden 2xl:block fixed left-4 top-1/2 -translate-y-1/2 z-40 w-[240px]">
-            <img src="https://i.ibb.co/hR1srq3S/image.png" alt="Side Ad" loading="lazy" decoding="async" className="w-full h-auto rounded-xl shadow-[0_0_20px_rgba(250,191,24,0.3)] border border-[#FABF18]/30" />
-          </div>
-          <div className="hidden 2xl:block fixed right-4 top-1/2 -translate-y-1/2 z-40 w-[240px]">
-            <img src="https://i.ibb.co/hR1srq3S/image.png" alt="Side Ad" loading="lazy" decoding="async" className="w-full h-auto rounded-xl shadow-[0_0_20px_rgba(250,191,24,0.3)] border border-[#FABF18]/30" />
-          </div>
-        </>
-      )}
+
 
       <SparkleBg density={currentView === 'game' ? 2 : 8} />
       {currentView !== 'game' && <FortuneParticles />}
@@ -2005,8 +1995,21 @@ export default function App() {
       </AnimatePresence>
 
       {/* SECTION 2: CLEAN WHITE SEO RULES SECTION - EXACT SAME WORDS AND LOOK FROM THE PICTURE */}
-      <section className="bg-white text-stone-800 px-6 sm:px-12 py-16 border-t border-stone-200" id="damas-seo-content">
-        <div className="max-w-4xl mx-auto space-y-12 leading-relaxed font-sans">
+      <section className="bg-white text-stone-800 px-6 sm:px-12 py-16 border-t border-stone-200 relative" id="damas-seo-content">
+        
+        {/* Banners Laterais Fixos na Seção SEO */}
+        <div className="hidden 2xl:block absolute left-4 top-16 bottom-16 w-[240px]">
+          <div className="sticky top-24">
+            <img src="https://i.ibb.co/hR1srq3S/image.png" alt="Side Ad" loading="lazy" decoding="async" className="w-full h-auto rounded-xl shadow-[0_0_20px_rgba(250,191,24,0.3)] border border-[#FABF18]/30" />
+          </div>
+        </div>
+        <div className="hidden 2xl:block absolute right-4 top-16 bottom-16 w-[240px]">
+          <div className="sticky top-24">
+            <img src="https://i.ibb.co/hR1srq3S/image.png" alt="Side Ad" loading="lazy" decoding="async" className="w-full h-auto rounded-xl shadow-[0_0_20px_rgba(250,191,24,0.3)] border border-[#FABF18]/30" />
+          </div>
+        </div>
+
+        <div className="max-w-4xl mx-auto space-y-12 leading-relaxed font-sans relative z-10">
           
           {/* Main Title Centered */}
           <div className="text-center space-y-2.5">
