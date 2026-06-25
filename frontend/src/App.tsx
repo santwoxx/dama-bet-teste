@@ -719,8 +719,9 @@ export default function App() {
     if (!player) return;
 
     if (player.balance < betAmount) {
-      setLobbyError(`Para criar um duelo é necessário ter um saldo mínimo de R$ ${betAmount.toFixed(2)} em sua conta, deposite agora!`);
+      alert(`Para criar um duelo é necessário ter um saldo mínimo de R$ ${betAmount.toFixed(2)} em sua conta, deposite agora!`);
       setLobbyTab('deposit');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -754,8 +755,9 @@ export default function App() {
     if (!player) return;
 
     if (player.balance < 10) {
-      setLobbyError(`Para criar um duelo privado é necessário ter um saldo mínimo de R$ 10,00 em sua conta, deposite agora!`);
+      alert('Para criar um duelo privado é necessário ter um saldo mínimo de R$ 10,00 em sua conta, deposite agora!');
       setLobbyTab('deposit');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -1519,9 +1521,9 @@ export default function App() {
 
                       <button
                         onClick={handleCreatePrivateGame}
-                        disabled={createLoading || betAmount !== 10}
+                        disabled={createLoading}
                         className="w-full bg-emerald-700 hover:bg-emerald-600 border border-emerald-500 text-stone-100 font-black py-3 px-4 rounded-lg uppercase tracking-widest text-xs cursor-pointer active:scale-95 transition-all flex justify-center items-center shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={betAmount !== 10 ? "Duelo Privado é fixo em R$ 10,00" : ""}
+                        title="Duelo Privado (Custo R$ 10,00)"
                       >
                         Criar Duelo Privado 1vs1 (R$ 10)
                       </button>
