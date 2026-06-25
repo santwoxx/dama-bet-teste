@@ -717,7 +717,8 @@ export default function App() {
     if (!player) return;
 
     if (player.balance < betAmount) {
-      setLobbyError(`Saldo virtual insuficiente (R$ ${player.balance.toFixed(2)}) para cobrir aposta de R$ ${betAmount.toFixed(2)}.`);
+      setLobbyError(`Para criar um duelo é necessário ter um saldo mínimo de R$ ${betAmount.toFixed(2)} em sua conta, deposite agora!`);
+      setLobbyTab('deposit');
       return;
     }
 
@@ -751,7 +752,8 @@ export default function App() {
     if (!player) return;
 
     if (player.balance < 10) {
-      setLobbyError(`Saldo virtual insuficiente (R$ ${player.balance.toFixed(2)}) para criar um duelo privado de R$ 10,00.`);
+      setLobbyError(`Para criar um duelo privado é necessário ter um saldo mínimo de R$ 10,00 em sua conta, deposite agora!`);
+      setLobbyTab('deposit');
       return;
     }
 
