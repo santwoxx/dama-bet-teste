@@ -59,6 +59,7 @@ export interface Game {
   platformFee: number;
   prizePool: number;
   status: GameStatus;
+  isPrivate?: boolean;
   
   host: Player;
   guest: Player | null;

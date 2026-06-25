@@ -159,7 +159,7 @@ function broadcastGame(gameId: string) {
 
 function broadcastLobby() {
   const lobbyGames = Array.from(games.values()).filter(
-    g => g.status === 'waiting_for_challenger' || g.status === 'bet_confirmation'
+    g => (g.status === 'waiting_for_challenger' || g.status === 'bet_confirmation') && !g.isPrivate
   );
   const deadConns: string[] = [];
   for (const conn of lobbyConnections) {
@@ -1037,7 +1037,7 @@ app.get('/api/deposits', requireAuth, async (req: AuthenticatedRequest, res) => 
 
 // Create Checkers Game Room
 app.post('/api/games/create', async (req, res) => {
-  const { hostId, betAmount, isBotGame, botGamesPlayed } = req.body;
+  const { hostId, betAmount, isBotGame, botGamesPlayed, isPrivate } = req.body;
   const parsedBet = parseFloat(betAmount);
   if (!hostId || isNaN(parsedBet) || parsedBet < 0) {
     return res.status(400).json({ error: 'Parâmetros de aposta inválidos' });
@@ -1084,6 +1084,7 @@ app.post('/api/games/create', async (req, res) => {
   const newGame: Game = {
     id: gameId,
     isBotGame: !!isBotGame,
+    isPrivate: !!isPrivate,
     betAmount: parsedBet,
     platformFee,
     prizePool,
@@ -1522,7 +1523,7 @@ app.get('/api/lobby/stream', (req, res) => {
   lobbyConnections.push(connection);
 
   const lobbyGames = Array.from(games.values()).filter(
-    g => g.status === 'waiting_for_challenger' || g.status === 'bet_confirmation'
+    g => (g.status === 'waiting_for_challenger' || g.status === 'bet_confirmation') && !g.isPrivate
   );
   res.write(`data: ${JSON.stringify(lobbyGames)}\n\n`);
 

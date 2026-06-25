@@ -120,6 +120,8 @@ export default function App() {
   const [activeGameId, setActiveGameId] = useState<string | null>(null);
   const [activeGame, setActiveGame] = useState<Game | null>(null);
   const [betAmount, setBetAmount] = useState<number>(10);
+  const [pendingInviteId, setPendingInviteId] = useState<string | null>(null);
+  const [showInviteLink, setShowInviteLink] = useState<string | null>(null);
   
   // Secondary simulated player (for local sandbox play)
   const [secondaryUserId, setSecondaryUserId] = useState<string>('');
@@ -284,6 +286,15 @@ export default function App() {
   // 1. Boot up: Verify stored token or prompt login
   useEffect(() => {
     const savedToken = localStorage.getItem('damabet_token');
+    
+    // Parse invite link if any
+    const params = new URLSearchParams(window.location.search);
+    const inviteId = params.get('invite');
+    if (inviteId) {
+      setPendingInviteId(inviteId);
+      // Remove it from the URL visually
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
 
     // Create secondary local player in case sandbox is activated
     let secId = localStorage.getItem('damabet_secUserId');
@@ -355,6 +366,43 @@ export default function App() {
       // safe fallback
     }
   };
+
+  // 2.5 Process Invite
+  useEffect(() => {
+    if (isAuthenticated && player && pendingInviteId && currentView === 'lobby') {
+      const totalPlayable = player.balance + (player.bonusBalance || 0);
+      if (totalPlayable < 10) {
+        setLobbyError('Você precisa de pelo menos R$ 10,00 na banca para aceitar este duelo privado!');
+        setLobbyTab('deposit');
+        setPendingInviteId(null);
+      } else {
+        const joinGame = async () => {
+          setCreateLoading(true);
+          try {
+            const resp = await fetch('/api/games/join', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ gameId: pendingInviteId, guestId: player.id })
+            });
+            const data = await resp.json();
+            if (resp.ok) {
+              setActiveGameId(data.game.id);
+              setActiveGame(data.game);
+              setCurrentView('game');
+            } else {
+              setLobbyError(data.error || 'Falha ao aceitar o convite.');
+            }
+          } catch (err) {
+            setLobbyError('Erro de conexão ao aceitar convite.');
+          } finally {
+            setCreateLoading(false);
+            setPendingInviteId(null);
+          }
+        };
+        joinGame();
+      }
+    }
+  }, [isAuthenticated, player, pendingInviteId, currentView]);
 
   const handleLogin = async (usernameInput: string, passwordInput: string) => {
     if (!usernameInput.trim() || !passwordInput.trim()) {
@@ -697,6 +745,42 @@ export default function App() {
     }
   };
 
+  // Actions trigger: CREATE PRIVATE GAME
+  const handleCreatePrivateGame = async () => {
+    setLobbyError('');
+    if (!player) return;
+
+    if (player.balance < 10) {
+      setLobbyError(`Saldo virtual insuficiente (R$ ${player.balance.toFixed(2)}) para criar um duelo privado de R$ 10,00.`);
+      return;
+    }
+
+    setCreateLoading(true);
+    try {
+      const response = await fetch('/api/games/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hostId: userId, betAmount: 10, isBotGame: false, isPrivate: true }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao inicializar duelo privado');
+      }
+
+      setActiveGameId(data.game.id);
+      setActiveGame(data.game);
+      setCurrentView('game');
+      const inviteUrl = window.location.origin + '/?invite=' + data.game.id;
+      setShowInviteLink(inviteUrl);
+      fetchProfile(userId);
+    } catch (err: any) {
+      setLobbyError(err.message || 'Houve um erro ao criar duelo privado.');
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   // Actions: SUBMIT MOVE
   const handleMoveSubmitted = useCallback(async (move: MoveCoordinates) => {
     if (!activeGameId) return;
@@ -901,9 +985,15 @@ export default function App() {
               <span className="text-white">Dama</span>
               <span className="text-[#FABF18] font-black italic gold-glow">Bet</span>
             </h1>
-            <p className="text-stone-300 text-xs mt-1.5 font-sans">
-              ✦ Autenticação Segura com Criptografia ✦
-            </p>
+            {pendingInviteId ? (
+              <p className="text-[#FABF18] text-xs mt-1.5 font-sans animate-pulse font-bold">
+                ✦ Você foi desafiado para um duelo 1vs1! Entre ou cadastre-se para aceitar. ✦
+              </p>
+            ) : (
+              <p className="text-stone-300 text-xs mt-1.5 font-sans">
+                ✦ Autenticação Segura com Criptografia ✦
+              </p>
+            )}
           </div>
 
           <div className="flex bg-[#08180c] p-1 rounded-lg border border-emerald-900/35 mb-6 relative">
@@ -1421,6 +1511,15 @@ export default function App() {
                         className="w-full bg-[#1c1917] hover:bg-[#292524] border border-stone-700 text-stone-300 font-bold py-3 px-4 rounded-lg uppercase tracking-widest text-xs cursor-pointer active:scale-95 transition-all flex justify-center items-center shadow-inner"
                       >
                         Modo Demo (Teste Grátis)
+                      </button>
+
+                      <button
+                        onClick={handleCreatePrivateGame}
+                        disabled={createLoading || betAmount !== 10}
+                        className="w-full bg-emerald-700 hover:bg-emerald-600 border border-emerald-500 text-stone-100 font-black py-3 px-4 rounded-lg uppercase tracking-widest text-xs cursor-pointer active:scale-95 transition-all flex justify-center items-center shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={betAmount !== 10 ? "Duelo Privado é fixo em R$ 10,00" : ""}
+                      >
+                        Criar Duelo Privado 1vs1 (R$ 10)
                       </button>
                     </div>
 
@@ -2211,6 +2310,50 @@ export default function App() {
             </button>
           </motion.div>
         </div>
+      {/* Invite Link Modal */}
+      {showInviteLink && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-[#18181b] border border-amber-500/40 rounded-2xl w-full max-w-sm p-6 shadow-[0_0_40px_rgba(250,191,24,0.2)] relative overflow-hidden text-center"
+          >
+            <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-amber-600 via-[#FABF18] to-amber-600" />
+            <div className="flex flex-col items-center mb-4 mt-2">
+              <div className="w-16 h-16 bg-amber-900/50 rounded-full flex items-center justify-center mb-3 border border-amber-500/30">
+                <span className="text-3xl">🔗</span>
+              </div>
+              <h3 className="text-xl font-black text-stone-100 uppercase tracking-widest text-center">
+                Duelo <span className="text-[#FABF18]">Criado!</span>
+              </h3>
+              <p className="text-[10px] text-stone-400 uppercase tracking-widest mt-1">Envie o link abaixo para seu adversário</p>
+            </div>
+            
+            <div className="bg-stone-900 border border-stone-700 p-3 rounded-lg mb-4 break-all text-xs text-stone-300 font-mono select-all">
+              {showInviteLink}
+            </div>
+            
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(showInviteLink);
+                  alert('Link copiado!');
+                }}
+                className="flex-1 bg-stone-700 hover:bg-stone-600 text-white font-black py-2.5 rounded-lg uppercase text-xs tracking-wider transition-all cursor-pointer"
+              >
+                Copiar Link
+              </button>
+              <button
+                onClick={() => setShowInviteLink(null)}
+                className="flex-1 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-black py-2.5 rounded-lg uppercase text-xs tracking-wider transition-all cursor-pointer"
+              >
+                Fechar
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* Floating WhatsApp Button */}
       <a 
         href="https://wa.me/15824001542" 
