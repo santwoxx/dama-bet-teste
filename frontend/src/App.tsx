@@ -432,6 +432,7 @@ export default function App() {
       setPlayer(data.user);
       setAuthToken(data.token);
       setIsAuthenticated(true);
+      setShowStartupWinnersModal(false); // Fixes black screen bug if modal was open during auth
 
       fetchProfile(data.user.id);
     } catch (err: any) {
@@ -479,6 +480,7 @@ export default function App() {
       setPlayer(data.user);
       setAuthToken(data.token);
       setIsAuthenticated(true);
+      setShowStartupWinnersModal(false); // Fixes black screen bug if modal was open during auth
 
       fetchProfile(data.user.id);
     } catch (err: any) {

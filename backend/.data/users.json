@@ -89,5 +89,31 @@
     "rolloverWagered": 0,
     "passwordHash": "09492d1369f7c565d5904e3d1c320ee35d0b2574b16fa3ccc8b03971e750bba87c4e878ac99609e68dc92b15ca939475333da3ff8d69c894c1eac03aecdbb295",
     "passwordSalt": "85c2ca77abee132e36d561140d3916c7"
+  },
+  {
+    "id": "user_admin",
+    "name": "admin",
+    "email": "admin@gmail.com",
+    "passwordHash": "d0844ac5c710372fa683095f6a6998467b2741cedfa9c3f971dbc5d71fa9dbe40bedd1a1a0464537121dffdf32cf0e0ccaaa9f018bdb59a7b9d4a315c72a3c0b",
+    "passwordSalt": "6b84844f50dee162cc704177e0534c73",
+    "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=user_admin",
+    "balance": 100,
+    "botGamesPlayed": 0,
+    "bonusBalance": 0,
+    "rolloverRequired": 0,
+    "rolloverWagered": 0
+  },
+  {
+    "id": "user_22868d82ed6306b4",
+    "name": "test3",
+    "email": "test3@gmail.com",
+    "passwordHash": "aed56bb5e69d9ca5da86da8e9ea382c3c54c83911cbf228ddfe89191b85141af64672aae4518044fe2f2f3c647e053a8e47e51d6971a09b17d125677e90d94ec",
+    "passwordSalt": "9a05d9a367c0bc555017421d82c0a909",
+    "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=user_22868d82ed6306b4",
+    "balance": 0,
+    "botGamesPlayed": 0,
+    "bonusBalance": 0,
+    "rolloverRequired": 0,
+    "rolloverWagered": 0
   }
 ]
