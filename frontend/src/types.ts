@@ -24,6 +24,7 @@ export interface Player {
   bonusBalance?: number;
   rolloverRequired?: number;
   rolloverWagered?: number;
+  isAdmin?: boolean;
 }
 
 export interface Transaction {

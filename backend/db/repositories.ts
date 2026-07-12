@@ -275,7 +275,8 @@ export class DepositRepository {
         status: r.status as any,
         createdAt: new Date(r.created_at).toISOString(),
         approvedAt: r.approved_at ? new Date(r.approved_at).toISOString() : undefined,
-        expirationAt: new Date(r.expiration_at).toISOString()
+        expirationAt: new Date(r.expiration_at).toISOString(),
+        userConfirmedAt: r.user_confirmed_at ? new Date(r.user_confirmed_at).toISOString() : undefined
       };
     } else {
       const list = getDepositsCache();
@@ -296,7 +297,8 @@ export class DepositRepository {
         status: r.status as any,
         createdAt: new Date(r.created_at).toISOString(),
         approvedAt: r.approved_at ? new Date(r.approved_at).toISOString() : undefined,
-        expirationAt: new Date(r.expiration_at).toISOString()
+        expirationAt: new Date(r.expiration_at).toISOString(),
+        userConfirmedAt: r.user_confirmed_at ? new Date(r.user_confirmed_at).toISOString() : undefined
       };
     } else {
       const list = getDepositsCache();
@@ -360,13 +362,59 @@ export class DepositRepository {
         status: r.status as any,
         createdAt: new Date(r.created_at).toISOString(),
         approvedAt: r.approved_at ? new Date(r.approved_at).toISOString() : undefined,
-        expirationAt: new Date(r.expiration_at).toISOString()
+        expirationAt: new Date(r.expiration_at).toISOString(),
+        userConfirmedAt: r.user_confirmed_at ? new Date(r.user_confirmed_at).toISOString() : undefined
       }));
     } else {
       const list = getDepositsCache();
       return list
         .filter(d => d.userId === userId)
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+  }
+
+  static async markUserConfirmed(id: string, confirmedAt: string): Promise<void> {
+    if (isPostgresActive && pool) {
+      await pool.query('UPDATE deposits SET user_confirmed_at = $2 WHERE id = $1', [id, new Date(confirmedAt)]);
+    } else {
+      const list = getDepositsCache();
+      const idx = list.findIndex(d => d.id === id);
+      if (idx !== -1) {
+        list[idx].userConfirmedAt = confirmedAt;
+        await writeJsonFileAsync(DEPOSITS_FILE, list);
+      }
+    }
+  }
+
+  // Deposits the admin panel should review: player claims to have paid, still pending.
+  static async findPendingConfirmed(): Promise<(Deposit & { userName?: string })[]> {
+    if (isPostgresActive && pool) {
+      const { rows } = await pool.query(
+        `SELECT d.*, u.name as user_name
+         FROM deposits d
+         LEFT JOIN users u ON d.user_id = u.id
+         WHERE d.status = 'pending' AND d.user_confirmed_at IS NOT NULL
+         ORDER BY d.user_confirmed_at ASC`
+      );
+      return rows.map((r: any) => ({
+        id: r.id,
+        userId: r.user_id,
+        mpPaymentId: r.mp_payment_id,
+        amount: parseFloat(r.amount),
+        status: r.status as any,
+        createdAt: new Date(r.created_at).toISOString(),
+        approvedAt: r.approved_at ? new Date(r.approved_at).toISOString() : undefined,
+        expirationAt: new Date(r.expiration_at).toISOString(),
+        userConfirmedAt: r.user_confirmed_at ? new Date(r.user_confirmed_at).toISOString() : undefined,
+        userName: r.user_name || undefined
+      }));
+    } else {
+      const dList = getDepositsCache();
+      const uList = getUsersCache();
+      return dList
+        .filter(d => d.status === 'pending' && !!d.userConfirmedAt)
+        .map(d => ({ ...d, userName: uList.find(u => u.id === d.userId)?.name }))
+        .sort((a, b) => new Date(a.userConfirmedAt!).getTime() - new Date(b.userConfirmedAt!).getTime());
     }
   }
 }

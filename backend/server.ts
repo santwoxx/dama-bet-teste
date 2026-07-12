@@ -3,10 +3,12 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import cors from 'cors';
+import compression from 'compression';
 import { initializeBoard, getValidMoves, executeMove, checkGameOver, selectSmartBotMove } from './utils/checkers.js';
 import { Game, Player, Message, Transaction, GameStatus, PlayerColor, MoveCoordinates, Piece, Deposit, WebhookEvent, Withdrawal } from './types.js';
 import { UserRepository, DepositRepository, TransactionRepository, WebhookEventRepository, WithdrawalRepository } from './db/repositories.js';
 import { requireAuth, AuthenticatedRequest, signToken, verifyToken } from './utils/auth.js';
+import { generatePixBRCode, PLATFORM_PIX_KEY, PLATFORM_PIX_KEY_TYPE, PLATFORM_PIX_HOLDER_NAME } from './utils/pix.js';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
 
 // --- Security Utilities for Password Hashing ---
@@ -46,6 +48,31 @@ function sanitize(val: string): string {
   return val.replace(/[<>&"']/g, '').trim();
 }
 
+// --- Admin Authorization ---
+// SECURITY: must be an exact ID match against a fixed allowlist, never a substring
+// match on a user-editable field like `name` (that let any user rename themselves
+// to gain admin access to withdrawal approval).
+const ADMIN_USER_IDS = new Set(
+  (process.env.ADMIN_USER_IDS || 'user_admin')
+    .split(',')
+    .map(id => id.trim())
+    .filter(Boolean)
+);
+
+function isAdminUser(user: Pick<Player, 'id'> | null | undefined): boolean {
+  return !!user && ADMIN_USER_IDS.has(user.id);
+}
+
+// SECURITY: strips password hash/salt before a Player object is ever sent over
+// the wire. This matters beyond auth responses — `host`/`guest` on a Game are
+// full Player records that get broadcast to the opponent and lobby watchers via
+// SSE, so any spot that embeds a Player into client-visible JSON must go through
+// this first.
+function toSafeUser(user: Player): Player & { isAdmin: boolean } {
+  const { passwordHash, passwordSalt, ...safe } = user;
+  return { ...safe, isAdmin: isAdminUser(user) };
+}
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -54,6 +81,12 @@ const FRONTEND_URL = process.env.FRONTEND_URL || '*';
 app.use(cors({
   origin: FRONTEND_URL === '*' ? '*' : FRONTEND_URL.split(','),
   credentials: true
+}));
+
+// Gzip all JSON responses to speed up the game/lobby polling and history endpoints.
+// SSE streams must stay unbuffered, so they're excluded by path.
+app.use(compression({
+  filter: (req, res) => !req.path.includes('/stream') && compression.filter(req, res)
 }));
 
 app.use(express.json());
@@ -340,6 +373,57 @@ async function refundBetWithBonus(user: Player, betAmount: number) {
   await UserRepository.save(user);
 }
 
+// --- Deposit Approval Helper ---
+// Shared by the manual admin-approval endpoint and the (currently unused,
+// kept for future re-activation) Mercado Pago webhook, so the World Cup promo
+// math only lives in one place.
+async function creditApprovedDeposit(deposit: Deposit, user: Player, description: string): Promise<void> {
+  await DepositRepository.updateStatus(deposit.id, 'approved', new Date().toISOString());
+
+  const now = new Date();
+  const deadline = new Date('2026-07-20T03:00:00Z');
+  let bonusAdded = 0;
+  const rolloverMultiplier = 3;
+
+  if (now <= deadline) {
+    if (deposit.amount >= 100) bonusAdded = 250;
+    else if (deposit.amount >= 50) bonusAdded = 120;
+    else if (deposit.amount >= 20) bonusAdded = 50;
+  }
+
+  user.balance += deposit.amount;
+  if (bonusAdded > 0) {
+    user.bonusBalance = (user.bonusBalance || 0) + bonusAdded;
+    user.rolloverRequired = (user.rolloverRequired || 0) + (bonusAdded * rolloverMultiplier);
+    user.rolloverWagered = user.rolloverWagered || 0;
+  }
+
+  await UserRepository.save(user);
+  console.log(`[CREDIT_DONE] Account ${user.id} credited R$ ${deposit.amount} (+ R$ ${bonusAdded} bonus).`);
+
+  const tx: Transaction = {
+    id: `tx-dep-${crypto.randomBytes(4).toString('hex')}`,
+    userId: user.id,
+    type: 'deposit',
+    amount: deposit.amount,
+    description,
+    createdAt: new Date().toISOString()
+  };
+  await TransactionRepository.create(tx);
+
+  if (bonusAdded > 0) {
+    const promoTx: Transaction = {
+      id: `tx-promo-${crypto.randomBytes(4).toString('hex')}`,
+      userId: user.id,
+      type: 'deposit',
+      amount: bonusAdded,
+      description: `🏆 Bônus Copa do Mundo 2026: +R$ ${bonusAdded.toFixed(2)} creditado! (Rollover 3x)`,
+      createdAt: new Date().toISOString()
+    };
+    await TransactionRepository.create(promoTx);
+  }
+}
+
 // --- User Profiling helper ---
 async function getOrCreateUser(id: string, customName?: string): Promise<Player> {
   let user = await UserRepository.findById(id);
@@ -365,7 +449,12 @@ async function getOrCreateUser(id: string, customName?: string): Promise<Player>
 }
 
 // --- Mercado Pago Client initialization ---
-const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN || '';
+// Accept both spellings seen across this project's docs/history so a misnamed
+// env var in the hosting dashboard doesn't silently disable real PIX payments.
+const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN || process.env.MERCADO_PAGO_ACCESS_TOKEN || '';
+if (!mpAccessToken) {
+  console.warn('[STARTUP] No Mercado Pago access token configured (MERCADOPAGO_ACCESS_TOKEN). Deposits will use MOCK PIX codes — no real money will be received.');
+}
 const mpConfig = new MercadoPagoConfig({
   accessToken: mpAccessToken,
   options: { timeout: 10000 }
@@ -428,7 +517,8 @@ app.post('/api/auth/register', async (req, res) => {
       balance: newUser.balance,
       bonusBalance: newUser.bonusBalance,
       rolloverRequired: newUser.rolloverRequired,
-      rolloverWagered: newUser.rolloverWagered
+      rolloverWagered: newUser.rolloverWagered,
+      isAdmin: isAdminUser(newUser)
     }
   });
 });
@@ -464,7 +554,8 @@ app.post('/api/auth/login', async (req, res) => {
       balance: foundUser.balance,
       bonusBalance: foundUser.bonusBalance,
       rolloverRequired: foundUser.rolloverRequired,
-      rolloverWagered: foundUser.rolloverWagered
+      rolloverWagered: foundUser.rolloverWagered,
+      isAdmin: isAdminUser(foundUser)
     }
   });
 });
@@ -490,7 +581,8 @@ app.post('/api/auth/verify-token', async (req, res) => {
       balance: user.balance,
       bonusBalance: user.bonusBalance,
       rolloverRequired: user.rolloverRequired,
-      rolloverWagered: user.rolloverWagered
+      rolloverWagered: user.rolloverWagered,
+      isAdmin: isAdminUser(user)
     }
   });
 });
@@ -506,7 +598,7 @@ app.get('/api/users/profile', async (req, res) => {
   if (!id || typeof id !== 'string') return res.status(400).json({ error: 'Falta o ID do usuário' });
   const user = await getOrCreateUser(id, typeof name === 'string' ? name : undefined);
   const txHistory = await TransactionRepository.findAllByUserId(id);
-  res.json({ user, transactions: txHistory });
+  res.json({ user: toSafeUser(user), transactions: txHistory });
 });
 
 // Name update
@@ -517,20 +609,28 @@ app.post('/api/users/update-name', requireAuth, async (req: AuthenticatedRequest
   if (!user) return res.status(401).json({ error: 'Usuário não encontrado.' });
   user.name = sanitize(name);
   await UserRepository.save(user);
-  res.json({ success: true, user });
+  res.json({ success: true, user: toSafeUser(user) });
 });
 
-// Dev Simulation Deposit
-app.post('/api/users/deposit', async (req, res) => {
+// Dev/Admin Simulation Deposit — credits a balance without a real PIX transfer.
+// SECURITY: this used to be callable by anyone (no auth) as long as an env flag
+// was set, meaning a misconfigured flag would let any visitor mint free balance
+// for themselves. It now always requires an authenticated admin, regardless of
+// the env flag, which only controls whether it's available at all in production.
+app.post('/api/users/deposit', requireAuth, async (req: AuthenticatedRequest, res) => {
   const { id, amount } = req.body;
   const numAmount = parseFloat(amount);
   if (!id || isNaN(numAmount) || numAmount <= 0) {
     return res.status(400).json({ error: 'Quantia de depósito inválida' });
   }
 
-  // Security gate: block simulated deposits in production unless allowed
   if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SIMULATED_DEPOSITS !== 'true') {
-    return res.status(403).json({ error: 'Depósitos simulados estão desativados em produção. Use o fluxo Mercado Pago PIX.' });
+    return res.status(403).json({ error: 'Depósitos simulados estão desativados em produção. Use o fluxo PIX manual.' });
+  }
+
+  const requester = await UserRepository.findById(req.userId!);
+  if (!isAdminUser(requester)) {
+    return res.status(403).json({ error: 'Acesso negado. Apenas administradores.' });
   }
 
   const user = await getOrCreateUser(id);
@@ -578,7 +678,7 @@ app.post('/api/users/deposit', async (req, res) => {
   }
 
   const txHistory = await TransactionRepository.findAllByUserId(id);
-  res.json({ user, transactions: txHistory });
+  res.json({ user: toSafeUser(user), transactions: txHistory });
 });
 
 // Withdrawal Request (to be paid manually by administrator)
@@ -683,7 +783,7 @@ app.post('/api/users/withdraw', requireAuth, async (req: AuthenticatedRequest, r
   // Retrieve updated user and transactions list
   const updatedUser = await UserRepository.findById(userId);
   const txHistory = await TransactionRepository.findAllByUserId(userId);
-  res.json({ success: true, user: updatedUser, transactions: txHistory });
+  res.json({ success: true, user: updatedUser ? toSafeUser(updatedUser) : null, transactions: txHistory });
 });
 
 // GET user withdrawals list
@@ -701,7 +801,7 @@ app.get('/api/withdrawals', requireAuth, async (req: AuthenticatedRequest, res) 
 app.get('/api/admin/withdrawals', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const user = await UserRepository.findById(req.userId!);
-    if (!user || (!user.name.toLowerCase().includes('admin') && !user.id.toLowerCase().includes('admin'))) {
+    if (!isAdminUser(user)) {
       return res.status(403).json({ error: 'Acesso negado. Apenas administradores.' });
     }
     const list = await WithdrawalRepository.findAll();
@@ -723,7 +823,7 @@ app.post('/api/admin/withdrawals/status', requireAuth, async (req: Authenticated
 
   try {
     const user = await UserRepository.findById(req.userId!);
-    if (!user || (!user.name.toLowerCase().includes('admin') && !user.id.toLowerCase().includes('admin'))) {
+    if (!isAdminUser(user)) {
       return res.status(403).json({ error: 'Acesso negado. Apenas administradores.' });
     }
 
@@ -747,9 +847,14 @@ app.post('/api/admin/withdrawals/status', requireAuth, async (req: Authenticated
   }
 });
 
-// --- NEW MERCADO PAGO PIX ENDPOINTS ---
+// --- MANUAL PIX DEPOSIT ENDPOINTS ---
+// The platform doesn't rely on an automated payment gateway for deposits: the
+// player pays a fixed, real PIX key belonging to the site owner, taps "Já
+// paguei", and the owner manually confirms the transfer landed in their bank
+// account before approving it from the admin panel. Mirrors the withdrawal
+// flow, which is manual by the same design choice.
 
-// 1. Create PIX Deposit
+// 1. Create a pending deposit and hand back the static PIX "Copia e Cola" code
 app.post('/api/deposit/create', requireAuth, async (req: AuthenticatedRequest, res) => {
   const { amount } = req.body;
   const numAmount = parseFloat(amount);
@@ -764,54 +869,15 @@ app.post('/api/deposit/create', requireAuth, async (req: AuthenticatedRequest, r
   }
 
   const depositId = `dep-${crypto.randomBytes(8).toString('hex')}`;
-  const expirationMinutes = 30;
-  const expirationDate = new Date(Date.now() + expirationMinutes * 60 * 1000);
-  
-  let paymentResponse;
-  if (mpAccessToken) {
-    try {
-      console.log(`[DEPOSIT_CREATED] User ${user.name} (${user.id}) requested PIX of R$ ${numAmount}`);
-      const mpResponse = await paymentClient.create({
-        body: {
-          transaction_amount: numAmount,
-          description: `Depósito Dama Bet - ${user.name}`,
-          payment_method_id: 'pix',
-          payer: {
-            email: user.email || 'jogador@damabet.com'
-          },
-          external_reference: depositId,
-          notification_url: `${process.env.APP_URL || 'https://dama-bet.onrender.com'}/api/webhooks/mercadopago`,
-          date_of_expiration: expirationDate.toISOString()
-        }
-      });
-      paymentResponse = mpResponse;
-    } catch (mpErr: any) {
-      console.error('Error contacting Mercado Pago API:', mpErr?.message || mpErr);
-      return res.status(500).json({ error: 'Falha ao gerar PIX com Mercado Pago. Tente mais tarde.' });
-    }
-  } else {
-    // Fallback Mock for local development
-    console.log('[DEPOSIT_CREATED] Mocking Mercado Pago PIX Creation (No ACCESS_TOKEN configured)');
-    const mockId = Math.floor(100000000 + Math.random() * 900000000).toString();
-    paymentResponse = {
-      id: mockId,
-      point_of_interaction: {
-        transaction_data: {
-          qr_code: `00020101021226830014br.gov.bcb.pix2561pix.example.com/qr/v2/mock-${mockId}5204000053039865405${numAmount.toFixed(2)}5802BR5915DAMA_BET_LTDA6009SAO_PAULO62070503***6304FC7D`,
-          qr_code_base64: 'iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAYAAAB5gXhkAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUHBgYTFw03D***'
-        }
-      },
-      transaction_amount: numAmount,
-      status: 'pending'
-    };
-  }
-
-  const mpPaymentId = String(paymentResponse.id);
+  // Manual review needs realistic time to check a bank statement, not a tight
+  // automated-gateway window.
+  const expirationHours = 24;
+  const expirationDate = new Date(Date.now() + expirationHours * 60 * 60 * 1000);
 
   const newDeposit: Deposit = {
     id: depositId,
     userId: user.id,
-    mpPaymentId: mpPaymentId,
+    mpPaymentId: `manual-${crypto.randomBytes(6).toString('hex')}`,
     amount: numAmount,
     status: 'pending',
     createdAt: new Date().toISOString(),
@@ -819,17 +885,88 @@ app.post('/api/deposit/create', requireAuth, async (req: AuthenticatedRequest, r
   };
 
   await DepositRepository.create(newDeposit);
-  console.log(`[PIX_GENERATED] Deposit ${depositId} (MP ID: ${mpPaymentId}) created for R$ ${numAmount}. Expires at ${newDeposit.expirationAt}`);
+  console.log(`[PIX_GENERATED] Deposit ${depositId} created for R$ ${numAmount} by user ${user.id} (${user.name}). Expires at ${newDeposit.expirationAt}`);
 
   res.json({
-    paymentId: depositId,
-    qrCode: paymentResponse.point_of_interaction?.transaction_data?.qr_code,
-    qrCodeBase64: paymentResponse.point_of_interaction?.transaction_data?.qr_code_base64,
-    amount: numAmount
+    depositId,
+    qrCode: generatePixBRCode(numAmount),
+    amount: numAmount,
+    pixKey: PLATFORM_PIX_KEY,
+    pixKeyType: PLATFORM_PIX_KEY_TYPE,
+    holderName: PLATFORM_PIX_HOLDER_NAME
   });
 });
 
-// 2. Mercado Pago Webhook
+// 2. Player confirms they've sent the transfer — moves the deposit into the
+// admin's review queue. Does not credit balance by itself.
+app.post('/api/deposit/:id/confirm', requireAuth, async (req: AuthenticatedRequest, res) => {
+  const depositId = req.params.id;
+  const deposit = await DepositRepository.findById(depositId);
+  if (!deposit) return res.status(404).json({ error: 'Depósito não encontrado.' });
+  if (deposit.userId !== req.userId) return res.status(403).json({ error: 'Não autorizado.' });
+  if (deposit.status !== 'pending') return res.status(400).json({ error: 'Este depósito já foi processado.' });
+
+  await DepositRepository.markUserConfirmed(depositId, new Date().toISOString());
+  console.log(`[DEPOSIT_USER_CONFIRMED] User ${req.userId} marked deposit ${depositId} (R$ ${deposit.amount}) as paid. Awaiting admin review.`);
+  res.json({ success: true });
+});
+
+// 3. Admin queue: deposits the player has confirmed paying, awaiting approval
+app.get('/api/admin/deposits', requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const admin = await UserRepository.findById(req.userId!);
+    if (!isAdminUser(admin)) {
+      return res.status(403).json({ error: 'Acesso negado. Apenas administradores.' });
+    }
+    const list = await DepositRepository.findPendingConfirmed();
+    res.json(list);
+  } catch (err) {
+    console.error('Error fetching admin deposits:', err);
+    res.status(500).json({ error: 'Erro ao listar depósitos pendentes.' });
+  }
+});
+
+// 4. Admin approves/rejects a manually-confirmed deposit
+app.post('/api/admin/deposits/status', requireAuth, async (req: AuthenticatedRequest, res) => {
+  const { depositId, status } = req.body;
+  const allowedStatuses = ['approved', 'rejected'];
+  if (!depositId || !status || !allowedStatuses.includes(status)) {
+    return res.status(400).json({ error: 'Parâmetros de atualização inválidos.' });
+  }
+
+  try {
+    const admin = await UserRepository.findById(req.userId!);
+    if (!isAdminUser(admin)) {
+      return res.status(403).json({ error: 'Acesso negado. Apenas administradores.' });
+    }
+
+    const deposit = await DepositRepository.findById(depositId);
+    if (!deposit) return res.status(404).json({ error: 'Depósito não encontrado.' });
+    if (deposit.status !== 'pending') {
+      return res.status(400).json({ error: 'Este depósito já foi finalizado.' });
+    }
+
+    if (status === 'rejected') {
+      await DepositRepository.updateStatus(depositId, 'rejected');
+      console.log(`[ADMIN_LOG] Depósito ${depositId} rejeitado pelo administrador ${admin!.name}.`);
+      return res.json({ success: true });
+    }
+
+    const depositUser = await UserRepository.findById(deposit.userId);
+    if (!depositUser) return res.status(404).json({ error: 'Usuário do depósito não encontrado.' });
+
+    await creditApprovedDeposit(deposit, depositUser, `Depósito via PIX aprovado manualmente (Ref: ${deposit.id})`);
+    console.log(`[ADMIN_LOG] Depósito ${depositId} aprovado pelo administrador ${admin!.name}. R$ ${deposit.amount} creditado a ${depositUser.name}.`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error updating deposit status:', err);
+    res.status(500).json({ error: 'Erro ao processar alteração de status do depósito.' });
+  }
+});
+
+// 5. Mercado Pago Webhook (inert unless MERCADOPAGO_ACCESS_TOKEN is configured
+// and the deposit-create flow above is switched back to using it — kept for
+// future re-activation, not used by the manual flow above)
 app.post('/api/webhooks/mercadopago', async (req, res) => {
   console.log('[WEBHOOK_RECEIVED] Webhook payload received:', JSON.stringify(req.body));
 
@@ -950,54 +1087,8 @@ app.post('/api/webhooks/mercadopago', async (req, res) => {
     return res.status(404).json({ error: 'Usuário não encontrado.' });
   }
 
-  // Update deposit to approved
-  await DepositRepository.updateStatus(deposit.id, 'approved', new Date().toISOString());
+  await creditApprovedDeposit(deposit, user, `Depósito via Mercado Pago PIX (Ref: ${deposit.mpPaymentId})`);
   console.log(`[PAYMENT_APPROVED] Deposit ${deposit.id} status set to approved.`);
-
-  // Calculate World Cup 2026 Promo rules
-  const now = new Date();
-  const deadline = new Date('2026-07-20T03:00:00Z');
-  let bonusAdded = 0;
-  const rolloverMultiplier = 3;
-
-  if (now <= deadline) {
-    if (deposit.amount >= 100) bonusAdded = 250;
-    else if (deposit.amount >= 50) bonusAdded = 120;
-    else if (deposit.amount >= 20) bonusAdded = 50;
-  }
-
-  user.balance += deposit.amount;
-  if (bonusAdded > 0) {
-    user.bonusBalance = (user.bonusBalance || 0) + bonusAdded;
-    user.rolloverRequired = (user.rolloverRequired || 0) + (bonusAdded * rolloverMultiplier);
-    user.rolloverWagered = user.rolloverWagered || 0;
-  }
-
-  await UserRepository.save(user);
-  console.log(`[CREDIT_DONE] Account ${user.id} credited R$ ${deposit.amount} (+ R$ ${bonusAdded} bonus).`);
-
-  // Write transactions
-  const tx: Transaction = {
-    id: `tx-mp-${deposit.mpPaymentId}`,
-    userId: user.id,
-    type: 'deposit',
-    amount: deposit.amount,
-    description: `Depósito via Mercado Pago PIX (Ref: ${deposit.mpPaymentId})`,
-    createdAt: new Date().toISOString()
-  };
-  await TransactionRepository.create(tx);
-
-  if (bonusAdded > 0) {
-    const promoTx: Transaction = {
-      id: `tx-promo-${crypto.randomBytes(4).toString('hex')}`,
-      userId: user.id,
-      type: 'deposit',
-      amount: bonusAdded,
-      description: `🏆 Bônus Copa do Mundo 2026: +R$ ${bonusAdded.toFixed(2)} creditado! (Rollover 3x)`,
-      createdAt: new Date().toISOString()
-    };
-    await TransactionRepository.create(promoTx);
-  }
 
   // Record Webhook Event as processed (idempotency token)
   const webhookEvent: WebhookEvent = {
@@ -1011,17 +1102,18 @@ app.post('/api/webhooks/mercadopago', async (req, res) => {
   res.json({ success: true, message: 'Deposit successfully approved and credited.' });
 });
 
-// 3. Status Polling Endpoint
+// 6. Status Polling Endpoint
 app.get('/api/deposit/status/:id', async (req, res) => {
   const deposit = await DepositRepository.findById(req.params.id);
   if (!deposit) return res.status(404).json({ error: 'Depósito não encontrado.' });
   res.json({
     status: deposit.status,
-    amount: deposit.amount
+    amount: deposit.amount,
+    userConfirmedAt: deposit.userConfirmedAt || null
   });
 });
 
-// 4. Authenticated Deposit History
+// 7. Authenticated Deposit History
 app.get('/api/deposits', requireAuth, async (req: AuthenticatedRequest, res) => {
   const list = await DepositRepository.findAllByUserId(req.userId!);
   const formatted = list.map(d => ({
@@ -1089,7 +1181,7 @@ app.post('/api/games/create', async (req, res) => {
     platformFee,
     prizePool,
     status: isBotGame ? 'active' : 'waiting_for_challenger',
-    host: hostPlayer,
+    host: toSafeUser(hostPlayer),
     guest: botPlayer,
     hostReady: !!isBotGame,
     guestReady: !!isBotGame,
@@ -1136,7 +1228,7 @@ app.post('/api/games/join', async (req, res) => {
     return res.status(400).json({ error: 'Saldo insuficiente para cobrir o valor da aposta!' });
   }
 
-  game.guest = guestPlayer;
+  game.guest = toSafeUser(guestPlayer);
   game.status = 'bet_confirmation';
   game.log.push(`${guestPlayer.name} entrou na mesa! Requer confirmação de fundos.`);
 
@@ -1651,42 +1743,43 @@ app.use((err: any, req: any, res: any, _next: any) => {
 
 // Boot backend server
 async function seedAdminUser() {
+  const adminId = 'user_admin';
   const adminUsername = 'admin';
   const adminEmail = 'admin@gmail.com';
-  const adminPassword = '@3admin@#';
 
   try {
-    const existing = await UserRepository.findByEmailOrUsername(adminUsername);
-    if (!existing) {
-      console.log(`[BOOTSTRAP] Seeding admin user...`);
-      const { hash, salt } = hashPassword(adminPassword);
-      const id = 'user_admin';
-      const adminUser: Player = {
-        id,
-        name: adminUsername,
-        email: adminEmail,
-        passwordHash: hash,
-        passwordSalt: salt,
-        avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${id}`,
-        balance: 100.0,
-        botGamesPlayed: 0,
-        bonusBalance: 0,
-        rolloverRequired: 0,
-        rolloverWagered: 0
-      };
-      await UserRepository.save(adminUser);
-      console.log(`[BOOTSTRAP] Admin user successfully seeded.`);
-    } else {
-      console.log(`[BOOTSTRAP] Admin user already exists. Checking/Updating password configuration...`);
-      const { hash, salt } = hashPassword(adminPassword);
-      existing.passwordHash = hash;
-      existing.passwordSalt = salt;
-      if (!existing.name.toLowerCase().includes('admin')) {
-        existing.name = 'admin';
-      }
-      await UserRepository.save(existing);
-      console.log(`[BOOTSTRAP] Admin user password configuration updated/synchronized.`);
+    // SECURITY: only create the admin account on first boot. Never overwrite an
+    // existing admin's password on every restart — that let anyone who reads this
+    // source file's git history log back in even after the password was rotated.
+    const existing = await UserRepository.findById(adminId);
+    if (existing) {
+      console.log('[BOOTSTRAP] Admin user already exists. Leaving credentials untouched.');
+      return;
     }
+
+    const adminPassword = process.env.ADMIN_PASSWORD || crypto.randomBytes(12).toString('base64url');
+    if (!process.env.ADMIN_PASSWORD) {
+      console.warn(`[BOOTSTRAP] ADMIN_PASSWORD not set. Generated one-time admin password: ${adminPassword}`);
+      console.warn('[BOOTSTRAP] Save this password now — it will not be shown again. Set ADMIN_PASSWORD to control it explicitly.');
+    }
+
+    console.log('[BOOTSTRAP] Seeding admin user...');
+    const { hash, salt } = hashPassword(adminPassword);
+    const adminUser: Player = {
+      id: adminId,
+      name: adminUsername,
+      email: adminEmail,
+      passwordHash: hash,
+      passwordSalt: salt,
+      avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${adminId}`,
+      balance: 0,
+      botGamesPlayed: 0,
+      bonusBalance: 0,
+      rolloverRequired: 0,
+      rolloverWagered: 0
+    };
+    await UserRepository.save(adminUser);
+    console.log('[BOOTSTRAP] Admin user successfully seeded.');
   } catch (err) {
     console.error('[BOOTSTRAP] Failed to seed admin user:', err);
   }

@@ -1,7 +1,18 @@
 import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'damabet-super-secret-key-change-in-production';
+const FALLBACK_DEV_SECRET = 'damabet-super-secret-key-change-in-production';
+
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  // SECURITY: this fallback secret is public (it's in the repo). Using it in
+  // production means anyone can forge login tokens for any user, including admin.
+  throw new Error(
+    'JWT_SECRET environment variable is required in production. ' +
+    'Set it in the Render dashboard before starting the server.'
+  );
+}
+
+const JWT_SECRET = process.env.JWT_SECRET || FALLBACK_DEV_SECRET;
 
 export interface AuthenticatedRequest extends Request {
   userId?: string;

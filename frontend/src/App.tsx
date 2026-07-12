@@ -1341,7 +1341,7 @@ export default function App() {
                 >
                   ⚡ <span className="hidden sm:inline">Depositar via PIX</span><span className="sm:hidden">PIX</span>
                 </button>
-                {player && (player.name.toLowerCase().includes('admin') || player.id.toLowerCase().includes('admin')) && (
+                {player && player.isAdmin && (
                   <button
                     onClick={() => setLobbyTab('admin')}
                     className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-black text-[10px] sm:text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${

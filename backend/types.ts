@@ -98,6 +98,9 @@ export interface Deposit {
   createdAt: string;
   approvedAt?: string;
   expirationAt: string;
+  // Set when the player clicks "Já paguei" — signals the admin queue that this
+  // deposit is actually awaiting review, not just an abandoned generated code.
+  userConfirmedAt?: string;
 }
 
 export interface WebhookEvent {

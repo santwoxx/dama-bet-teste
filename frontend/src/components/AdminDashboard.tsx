@@ -1,20 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Check, 
-  Copy, 
-  RotateCw, 
-  Clock, 
-  Sparkles, 
-  AlertCircle, 
-  Calendar, 
-  Search, 
-  Filter, 
-  User, 
-  Key, 
-  DollarSign, 
+import {
+  Check,
+  Copy,
+  RotateCw,
+  Clock,
+  Sparkles,
+  AlertCircle,
+  Calendar,
+  Search,
+  Filter,
+  User,
+  Key,
+  DollarSign,
   XCircle,
-  TrendingUp
+  TrendingUp,
+  ArrowDownCircle,
+  ArrowUpCircle
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -33,20 +35,37 @@ interface AdminWithdrawal {
   approvedAt?: string;
 }
 
+interface AdminDeposit {
+  id: string;
+  userId: string;
+  userName?: string;
+  amount: number;
+  status: 'pending' | 'approved' | 'rejected' | 'expired';
+  createdAt: string;
+  userConfirmedAt?: string;
+}
+
 export default function AdminDashboard({ token }: AdminDashboardProps) {
+  const [activeTab, setActiveTab] = useState<'withdrawals' | 'deposits'>('deposits');
+
   const [withdrawals, setWithdrawals] = useState<AdminWithdrawal[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  
+
   // Search & filter states
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  
+
   // PIX key copy feedback state
   const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
   const [copiedAmountId, setCopiedAmountId] = useState<string | null>(null);
+
+  // Deposits queue state
+  const [deposits, setDeposits] = useState<AdminDeposit[]>([]);
+  const [depositsLoading, setDepositsLoading] = useState(false);
+  const [depositActionLoading, setDepositActionLoading] = useState<string | null>(null);
 
   const fetchWithdrawals = async () => {
     setLoading(true);
@@ -71,8 +90,30 @@ export default function AdminDashboard({ token }: AdminDashboardProps) {
     }
   };
 
+  const fetchDeposits = async () => {
+    setDepositsLoading(true);
+    setError('');
+    try {
+      const resp = await fetch('/api/admin/deposits', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!resp.ok) {
+        const errData = await resp.json();
+        throw new Error(errData.error || 'Erro ao carregar depósitos.');
+      }
+      const data = await resp.json();
+      setDeposits(data);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Erro ao conectar ao servidor.');
+    } finally {
+      setDepositsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchWithdrawals();
+    fetchDeposits();
   }, [token]);
 
   const handleUpdateStatus = async (withdrawalId: string, nextStatus: 'approved' | 'rejected' | 'processing') => {
@@ -99,6 +140,32 @@ export default function AdminDashboard({ token }: AdminDashboardProps) {
       setError(err.message || 'Erro de conexão.');
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleUpdateDepositStatus = async (depositId: string, nextStatus: 'approved' | 'rejected') => {
+    setError('');
+    setSuccessMsg('');
+    setDepositActionLoading(depositId);
+    try {
+      const resp = await fetch('/api/admin/deposits/status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ depositId, status: nextStatus })
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data.error || 'Erro ao atualizar depósito.');
+      }
+      setSuccessMsg(nextStatus === 'approved' ? 'Depósito aprovado e saldo creditado.' : 'Depósito recusado.');
+      await fetchDeposits();
+    } catch (err: any) {
+      setError(err.message || 'Erro de conexão.');
+    } finally {
+      setDepositActionLoading(null);
     }
   };
 
@@ -158,24 +225,56 @@ export default function AdminDashboard({ token }: AdminDashboardProps) {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl sm:text-2xl font-black uppercase text-[#FABF18] tracking-wider mb-2 flex items-center gap-2">
-              <span>👑 Painel Administrativo de Saques</span>
+              <span>👑 Painel Administrativo</span>
               <Sparkles className="w-5 h-5 text-amber-400 animate-pulse" />
             </h2>
             <p className="text-stone-400 text-xs sm:text-sm font-medium">
-              Gerencie e processe as solicitações de saques PIX dos jogadores. Faça a transferência manual e mude o status.
+              {activeTab === 'deposits'
+                ? 'Confira no seu banco os PIX confirmados pelos jogadores e libere o saldo com 1 clique.'
+                : 'Gerencie e processe as solicitações de saques PIX dos jogadores. Faça a transferência manual e mude o status.'}
             </p>
           </div>
           <button
-            onClick={fetchWithdrawals}
-            disabled={loading}
+            onClick={() => (activeTab === 'deposits' ? fetchDeposits() : fetchWithdrawals())}
+            disabled={activeTab === 'deposits' ? depositsLoading : loading}
             className="self-start md:self-auto bg-stone-900 hover:bg-stone-850 border border-amber-800/30 text-amber-400 hover:text-amber-300 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
           >
-            <RotateCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RotateCw className={`w-3.5 h-3.5 ${(activeTab === 'deposits' ? depositsLoading : loading) ? 'animate-spin' : ''}`} />
             <span>Atualizar</span>
           </button>
         </div>
 
+        {/* TABS */}
+        <div className="flex gap-2 mt-5">
+          <button
+            onClick={() => setActiveTab('deposits')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer transition-all ${
+              activeTab === 'deposits'
+                ? 'bg-[#FABF18] text-stone-950 shadow-lg'
+                : 'bg-stone-900 text-stone-400 border border-stone-800 hover:text-stone-200'
+            }`}
+          >
+            <ArrowDownCircle className="w-3.5 h-3.5" />
+            Depósitos Pendentes
+            {deposits.length > 0 && (
+              <span className="ml-1 bg-black/30 rounded-full px-1.5 py-0.5 text-[10px]">{deposits.length}</span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('withdrawals')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer transition-all ${
+              activeTab === 'withdrawals'
+                ? 'bg-[#FABF18] text-stone-950 shadow-lg'
+                : 'bg-stone-900 text-stone-400 border border-stone-800 hover:text-stone-200'
+            }`}
+          >
+            <ArrowUpCircle className="w-3.5 h-3.5" />
+            Saques
+          </button>
+        </div>
+
         {/* STATS OVERVIEW */}
+        {activeTab === 'withdrawals' && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-5 border-t border-stone-850">
           <div className="bg-black/40 border border-stone-850 p-3 rounded-xl text-center">
             <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider block">Pendentes</span>
@@ -202,6 +301,24 @@ export default function AdminDashboard({ token }: AdminDashboardProps) {
             </span>
           </div>
         </div>
+        )}
+
+        {activeTab === 'deposits' && (
+        <div className="grid grid-cols-2 gap-4 mt-6 pt-5 border-t border-stone-850">
+          <div className="bg-black/40 border border-stone-850 p-3 rounded-xl text-center">
+            <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider block">Aguardando Aprovação</span>
+            <span className="text-lg font-mono font-black text-amber-400">
+              {deposits.length}
+            </span>
+          </div>
+          <div className="bg-black/40 border border-stone-850 p-3 rounded-xl text-center">
+            <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider block">Soma Pendente</span>
+            <span className="text-lg font-mono font-black text-emerald-400">
+              R$ {deposits.reduce((sum, d) => sum + d.amount, 0).toFixed(2).replace('.', ',')}
+            </span>
+          </div>
+        </div>
+        )}
       </div>
 
       {/* FEEDBACK ALERTS */}
@@ -231,6 +348,8 @@ export default function AdminDashboard({ token }: AdminDashboardProps) {
         )}
       </AnimatePresence>
 
+      {activeTab === 'withdrawals' && (
+      <>
       {/* CONTROLS (SEARCH & FILTER) */}
       <div className="bg-[#111111]/90 border border-stone-850 rounded-2xl p-4 flex flex-col sm:flex-row gap-4 items-center">
         
@@ -433,6 +552,96 @@ export default function AdminDashboard({ token }: AdminDashboardProps) {
           </div>
         )}
       </div>
+      </>
+      )}
+
+      {/* DEPOSITS QUEUE */}
+      {activeTab === 'deposits' && (
+        <div className="space-y-4">
+          {depositsLoading ? (
+            <div className="text-center py-16 bg-[#111111]/90 border border-stone-850 rounded-2xl flex flex-col items-center gap-3">
+              <RotateCw className="w-8 h-8 animate-spin text-[#FABF18]" />
+              <span className="text-stone-400 text-xs font-semibold uppercase tracking-wider">Carregando depósitos...</span>
+            </div>
+          ) : deposits.length > 0 ? (
+            deposits.map((d) => (
+              <div
+                key={d.id}
+                className="bg-[#111111]/90 border border-stone-850 rounded-2xl p-5 shadow-lg flex flex-col md:flex-row gap-5 justify-between items-start md:items-center relative overflow-hidden transition-all duration-200 hover:border-amber-900/20"
+              >
+                <div className="space-y-3.5 flex-1 w-full">
+                  <div className="flex items-center justify-between border-b border-stone-850/60 pb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-amber-950 flex items-center justify-center text-[#FABF18]">
+                        <User className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <span className="font-bold text-xs text-stone-100 block">{d.userName || 'Jogador'}</span>
+                        <span className="font-mono text-[9px] text-stone-500 block">ID: {d.userId}</span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] text-stone-500 font-bold flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-stone-600" />
+                      <span>
+                        Confirmado em {d.userConfirmedAt ? new Date(d.userConfirmedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="bg-black/35 rounded-xl p-3 border border-stone-900 flex items-center justify-between">
+                    <div>
+                      <span className="text-[9px] text-stone-500 font-bold block uppercase tracking-wider">Valor a Conferir no Banco</span>
+                      <span className="font-mono text-base font-black text-amber-400">R$ {d.amount.toFixed(2).replace('.', ',')}</span>
+                    </div>
+                    <button
+                      onClick={() => handleCopyAmount(d.amount, d.id)}
+                      className="bg-stone-900 hover:bg-stone-850 p-1.5 rounded-lg text-stone-400 hover:text-stone-200 transition-all cursor-pointer shrink-0"
+                      title="Copiar Valor"
+                    >
+                      {copiedAmountId === d.id ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-row md:flex-col gap-2 w-full md:w-auto pt-3 md:pt-0 border-t md:border-t-0 border-stone-850/60 shrink-0 md:justify-center md:items-stretch">
+                  <button
+                    onClick={() => handleUpdateDepositStatus(d.id, 'approved')}
+                    disabled={depositActionLoading !== null}
+                    className="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-800 text-white hover:from-emerald-500 hover:to-emerald-700 font-black py-2.5 px-4 rounded-xl text-[10px] sm:text-xs uppercase tracking-wider cursor-pointer shadow-lg hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    {depositActionLoading === d.id ? (
+                      <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Aprovar e Creditar</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleUpdateDepositStatus(d.id, 'rejected')}
+                    disabled={depositActionLoading !== null}
+                    className="bg-stone-950 border border-red-950 hover:bg-red-950/20 text-red-400 font-black py-2.5 px-3 rounded-xl text-[10px] sm:text-xs uppercase tracking-wider cursor-pointer transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    {depositActionLoading === d.id ? (
+                      <RotateCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <>
+                        <XCircle className="w-3.5 h-3.5" />
+                        <span>Recusar</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-12 bg-[#111111]/90 border border-stone-850 rounded-2xl text-stone-500 text-xs font-semibold flex flex-col items-center gap-2">
+              <span>Nenhum depósito aguardando aprovação no momento.</span>
+            </div>
+          )}
+        </div>
+      )}
 
     </div>
   );

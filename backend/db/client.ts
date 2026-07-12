@@ -72,7 +72,12 @@ async function initializePostgresTables() {
         expiration_at TIMESTAMP WITH TIME ZONE
       );
     `);
- 
+
+    // Player-confirmed-payment timestamp for manual PIX deposits (admin approval queue).
+    await client.query(`
+      ALTER TABLE deposits ADD COLUMN IF NOT EXISTS user_confirmed_at TIMESTAMP WITH TIME ZONE;
+    `);
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS transactions (
         id VARCHAR(255) PRIMARY KEY,
@@ -105,7 +110,17 @@ async function initializePostgresTables() {
         processed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    
+
+    // Indexes for the user_id lookups every wallet/history/admin query does.
+    // Without these, Postgres full-scans deposits/transactions/withdrawals as
+    // they grow, which is the main thing that will make the app feel slower
+    // over time (id/mp_payment_id already have implicit indexes via PK/UNIQUE).
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_deposits_user_id ON deposits(user_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_deposits_status_expiration ON deposits(status, expiration_at);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_withdrawals_user_id ON withdrawals(user_id);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_withdrawals_status ON withdrawals(status);`);
+
     console.log('PostgreSQL tables checked/created successfully.');
   } catch (err: any) {
     console.error('Error creating database tables:', err.message);

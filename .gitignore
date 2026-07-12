@@ -7,7 +7,7 @@ coverage/
 .env*
 !.env.example
 .data/
-users-db.json
+users-db.json*
 server.mjs
 
 .vercel
