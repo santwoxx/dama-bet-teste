@@ -162,17 +162,22 @@ function CheckersBoard({
                         </div>
                       )}
 
-                      {/* Render Cell Pieces with sophisticated layout satin gradients */}
+                      {/* Render Cell Pieces with sophisticated layout satin gradients.
+                          `layout` + a shared `layoutId` makes a piece glide from its old
+                          cell to its new one (FLIP transition) instead of popping out and
+                          back in — this is what makes moves/captures read as "premium". */}
                       <AnimatePresence>
                         {piece && (
                           <motion.div
                             key={piece.id}
+                            layout
+                            layoutId={piece.id}
                             initial={{ scale: 0.3, opacity: 0 }}
                             animate={{ scale: isCellSelected ? 1.12 : 1, opacity: 1 }}
-                            exit={{ scale: 0, opacity: 0 }}
+                            exit={{ scale: 1.35, opacity: 0, transition: { duration: 0.22, ease: 'easeOut' } }}
                             whileHover={{ scale: isCellSelected ? 1.15 : 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                            transition={{ layout: { type: 'spring', stiffness: 500, damping: 40 }, default: { type: 'spring', stiffness: 350, damping: 25 } }}
                             onClick={(e) => {
                               e.stopPropagation();
                               handlePieceClick(piece);

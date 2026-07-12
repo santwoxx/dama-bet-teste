@@ -43,6 +43,19 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          // Vendor code changes far less often than app code — splitting it out
+          // lets browsers keep it cached across deploys instead of re-fetching
+          // React/animation libs on every release.
+          manualChunks: {
+            'vendor-react': ['react', 'react-dom'],
+            'vendor-motion': ['motion'],
+          },
+        },
+      },
+    },
     server: {
       port: 3000,
       proxy: {

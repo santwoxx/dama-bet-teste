@@ -1,14 +1,25 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Coins, PlusCircle, Play, ArrowRight, UserCheck, Users, Copy, Send, HelpCircle, Mail, User, Lock, Eye, EyeOff, LogOut, Key, Sparkles, CircleDollarSign, Gem, Crown } from 'lucide-react';
 import { Game, Player, Transaction, MoveCoordinates, PlayerColor } from './types';
 import Header from './components/Header';
-import CheckersBoard from './components/CheckersBoard';
-import ReferralsDashboard from './components/ReferralsDashboard';
-import VictoryAnimation from './components/VictoryAnimation';
 import { playReactionSound, playWinSound, playMoveSound, playCaptureSound } from './utils/audio';
 import { motion, AnimatePresence } from 'motion/react';
-import DepositPage from './components/DepositPage';
-import AdminDashboard from './components/AdminDashboard';
+
+// Code-split rarely-visited or below-the-fold views so the initial bundle only
+// pays for the lobby/auth screen most sessions actually use.
+const CheckersBoard = lazy(() => import('./components/CheckersBoard'));
+const ReferralsDashboard = lazy(() => import('./components/ReferralsDashboard'));
+const VictoryAnimation = lazy(() => import('./components/VictoryAnimation'));
+const DepositPage = lazy(() => import('./components/DepositPage'));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
+
+function SuspenseFallback() {
+  return (
+    <div className="w-full flex items-center justify-center py-16">
+      <div className="w-8 h-8 border-2 border-[#FABF18]/30 border-t-[#FABF18] rounded-full animate-spin" />
+    </div>
+  );
+}
 
 // ─── Sparkle Background Overlay (Premium Style) ─────────────────────
 const SparkleBg = React.memo(function SparkleBg({ density = 15, className = '' }: { density?: number; className?: string }) {
@@ -1355,6 +1366,16 @@ export default function App() {
                 )}
               </div>
 
+              <AnimatePresence mode="wait">
+              <motion.div
+                key={lobbyTab}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+                className="w-full flex flex-col items-center"
+              >
+              <Suspense fallback={<SuspenseFallback />}>
               {lobbyTab === 'play' ? (
                 <>
                   {/* Copa do Mundo 2026 Promo Banner - Premium Enhanced */}
@@ -1582,6 +1603,9 @@ export default function App() {
               ) : (
                 <AdminDashboard token={authToken} />
               )}
+              </Suspense>
+              </motion.div>
+              </AnimatePresence>
 
               {/* Weekly Ranking + Last Winners Section */}
               <div className="w-full max-w-4xl mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4 z-10">
@@ -1852,6 +1876,7 @@ export default function App() {
                         )}
 
                         <div className="relative w-full max-w-[580px] flex flex-col items-center justify-center">
+                          <Suspense fallback={<SuspenseFallback />}>
                           <CheckersBoard
                             board={activeGame.board}
                             turn={activeGame.turn}
@@ -1860,7 +1885,8 @@ export default function App() {
                             onMoveSubmitted={handleMoveSubmitted}
                             gameActive={activeGame.status === 'active'}
                           />
-                          
+                          </Suspense>
+
                           {/* Floating Emojis Overlay Layer above board */}
                           <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
                             <AnimatePresence>
@@ -2080,6 +2106,7 @@ export default function App() {
       {/* Victory Celebration Dynamic Modal with confetti rain */}
       <AnimatePresence>
         {showVictoryOverlay && activeGame && activeGame.status === 'finished' && (
+          <Suspense fallback={null}>
           <VictoryAnimation
             winnerName={activeGame.winnerId ? (activeGame.winnerId === activeGame.host.id ? activeGame.host.name : activeGame.guest?.name || 'Adversário') : ''}
             isDraw={!activeGame.winnerId}
@@ -2091,6 +2118,7 @@ export default function App() {
               handleExitToLobby();
             }}
           />
+          </Suspense>
         )}
       </AnimatePresence>
 
@@ -2216,13 +2244,13 @@ export default function App() {
           <div className="flex flex-col items-center gap-4 w-full">
             <div className="flex flex-wrap items-center justify-center gap-4">
               <a href="https://imgbb.com/">
-                <img src="https://i.ibb.co/W4jbFsBw/autorizado.webp" alt="autorizado" border={0} className="h-10 sm:h-12 rounded border border-stone-700" />
+                <img src="https://i.ibb.co/W4jbFsBw/autorizado.webp" alt="autorizado" loading="lazy" decoding="async" className="h-10 sm:h-12 rounded border border-stone-700" />
               </a>
               <a href="https://imgbb.com/">
-                <img src="https://i.ibb.co/2zRxcTw/pix.webp" alt="pix" border={0} className="h-10 sm:h-12 rounded border border-stone-700" />
+                <img src="https://i.ibb.co/2zRxcTw/pix.webp" alt="pix" loading="lazy" decoding="async" className="h-10 sm:h-12 rounded border border-stone-700" />
               </a>
               <a href="https://imgbb.com/">
-                <img src="https://i.ibb.co/ym1v2JsP/ba9a415d-6529-4b81-b5ca-d53017bd3087.webp" alt="ba9a415d-6529-4b81-b5ca-d53017bd3087" border={0} className="h-10 sm:h-12 rounded border border-stone-700" />
+                <img src="https://i.ibb.co/ym1v2JsP/ba9a415d-6529-4b81-b5ca-d53017bd3087.webp" alt="ba9a415d-6529-4b81-b5ca-d53017bd3087" loading="lazy" decoding="async" className="h-10 sm:h-12 rounded border border-stone-700" />
               </a>
             </div>
             <div className="text-center space-y-1 max-w-2xl">
