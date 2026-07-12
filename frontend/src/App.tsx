@@ -1222,9 +1222,18 @@ export default function App() {
       {/* Banners Topo e Meio (Só no Lobby) */}
       {currentView !== 'game' && (
         <div className="flex flex-col gap-4 w-full items-center mt-6 px-4 relative z-30">
-          {/* Banner Topo */}
-          <div className="w-full flex justify-center">
-            <img src="https://i.ibb.co/r2sTdfJb/image.png" alt="Top Ad" loading="lazy" decoding="async" className="w-full max-w-[1200px] h-auto rounded-xl shadow-[0_0_20px_rgba(250,191,24,0.3)] border border-[#FABF18]/30" />
+          {/* Banner Topo — atravessa a tela de um canto a outro em loop contínuo */}
+          <div className="w-full overflow-hidden flex justify-center">
+            <motion.img
+              src="https://i.ibb.co/r2sTdfJb/image.png"
+              alt="Top Ad"
+              loading="lazy"
+              decoding="async"
+              className="w-full max-w-[1200px] h-auto rounded-xl shadow-[0_0_20px_rgba(250,191,24,0.3)] border border-[#FABF18]/30"
+              initial={{ x: '115vw' }}
+              animate={{ x: '-115vw' }}
+              transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+            />
           </div>
         </div>
       )}
@@ -2229,10 +2238,19 @@ export default function App() {
         </div>
       </section>
 
-      {/* Banner Fim de Página (1080x192) */}
+      {/* Banner Fim de Página (1080x192) — atravessa a tela no sentido oposto ao do topo */}
       {currentView !== 'game' && (
-        <div className="w-full flex justify-center py-6 bg-[#0a0a0a] px-4">
-          <img src="https://i.ibb.co/cXSwHvGK/image.png" alt="Bottom Ad" loading="lazy" decoding="async" className="w-full max-w-[1080px] h-auto rounded-xl shadow-[0_0_15px_rgba(250,191,24,0.2)] border border-[#FABF18]/20" />
+        <div className="w-full overflow-hidden flex justify-center py-6 bg-[#0a0a0a] px-4">
+          <motion.img
+            src="https://i.ibb.co/cXSwHvGK/image.png"
+            alt="Bottom Ad"
+            loading="lazy"
+            decoding="async"
+            className="w-full max-w-[1080px] h-auto rounded-xl shadow-[0_0_15px_rgba(250,191,24,0.2)] border border-[#FABF18]/20"
+            initial={{ x: '-115vw' }}
+            animate={{ x: '115vw' }}
+            transition={{ duration: 22, repeat: Infinity, ease: 'linear' }}
+          />
         </div>
       )}
 
